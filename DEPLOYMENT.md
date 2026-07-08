@@ -34,8 +34,8 @@ Clone your repository into the `/var/www/` directory.
 sudo mkdir -p /var/www/webhook_forwarder
 sudo chown -R $USER:$USER /var/www/webhook_forwarder
 
-# Clone your project (replace with your actual git URL)
-git clone https://github.com/your-username/webhook-forwarder.git /var/www/webhook_forwarder
+# Clone your project
+git clone https://github.com/nusagates/webhook_forwarder.git /var/www/webhook_forwarder
 cd /var/www/webhook_forwarder
 ```
 
