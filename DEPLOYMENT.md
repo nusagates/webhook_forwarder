@@ -128,17 +128,35 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-## 6. Server: Enable SSL (HTTPS)
-To secure your webhooks, it is highly recommended to install a free SSL certificate using Let's Encrypt via Certbot.
+## 6. Server: Enable SSL (HTTPS) via Cloudflare DNS
+
+If your server has a strict firewall or you are using Cloudflare for DNS, you can use the automated DNS challenge to generate SSL certificates without opening port 80.
 
 ```bash
-# Install Certbot for Nginx
-sudo apt install -y certbot python3-certbot-nginx
+# 1. Install Certbot and the Cloudflare DNS plugin
+sudo apt install -y certbot python3-certbot-nginx python3-certbot-dns-cloudflare
 
-# Request and apply the SSL certificate (replace with your domain)
-sudo certbot --nginx -d your_domain.com -d www.your_domain.com
+# 2. Create the credentials file to store your API token
+mkdir -p ~/.secrets/certbot
+nano ~/.secrets/certbot/cloudflare.ini
 ```
-Certbot will automatically update your Nginx configuration to support HTTPS and set up a cron job to automatically renew the certificate before it expires.
+
+Inside the text editor, paste your Cloudflare API token like this:
+```ini
+dns_cloudflare_api_token = YOUR_CLOUDFLARE_API_TOKEN_HERE
+```
+Save and exit the file. Then, secure the file permissions so only your user can read the token:
+```bash
+chmod 600 ~/.secrets/certbot/cloudflare.ini
+```
+
+**Run the Automated DNS Challenge:**
+Execute Certbot to automatically verify your domain via Cloudflare and configure Nginx:
+```bash
+sudo certbot --dns-cloudflare --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini -i nginx -d hook.web.id -d www.hook.web.id
+```
+
+Certbot will automatically verify your domain, install the SSL certificate, update your Nginx configuration, and set up a background task to renew the certificate automatically every 90 days.
 
 ## 7. Access Your Application
 That's it! Open your browser and navigate to `http://your_domain.com` (or your server's public IP). Your Webhook Forwarder is now live in production without needing Node.js on the server!
