@@ -34,9 +34,12 @@ Make sure your machine/server has the following installed:
 
 ## 💻 Installation
 
-**1. Backend Setup (Python/FastAPI)**
+**1. Clone the Repository & Backend Setup (Python/FastAPI)**
 ```bash
-# Open terminal and navigate to the project folder
+# Clone the repository
+git clone https://github.com/nusagates/webhook_forwarder.git
+
+# Navigate into the project folder
 cd webhook_forwarder
 
 # Create a virtual environment and install dependencies using uv (recommended)
