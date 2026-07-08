@@ -7,11 +7,15 @@ SSH into your Ubuntu server and install the required packages:
 
 ```bash
 sudo apt update
-sudo apt install -y python3-pip python3-venv nginx curl
+sudo apt install -y nginx curl
 
 # Install Node.js (Version 18.x)
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
+
+# Install uv (Lightning-fast Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.cargo/env
 ```
 
 ## 2. Setup the Application
@@ -30,9 +34,9 @@ cd /var/www/webhook_forwarder
 Set up the Python virtual environment and install dependencies.
 
 ```bash
-python3 -m venv .venv
+uv venv
 source .venv/bin/activate
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 ### Create a Systemd Service for the Backend
