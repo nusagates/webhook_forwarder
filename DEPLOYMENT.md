@@ -1,24 +1,33 @@
 # Ubuntu Production Deployment Guide
 
-Deploying the Webhook Forwarder on an Ubuntu server involves running the FastAPI backend via `systemd` (using `uvicorn`), building the React frontend into static files, and using `Nginx` as a web server and reverse proxy.
+Deploying the Webhook Forwarder on an Ubuntu server involves running the FastAPI backend via `systemd` (using `uvicorn`) and using `Nginx` as a web server to serve the static frontend files and act as a reverse proxy for the API.
 
-## 1. Install Prerequisites
-SSH into your Ubuntu server and install the required packages:
+Since the React frontend compiles into static HTML/JS/CSS files, **you do NOT need to install Node.js on your production server**. You can build it locally on your computer and simply upload the built files.
+
+## 1. Local Machine: Build the Frontend
+Before touching the server, open a terminal on your **Local Computer** and build the React app:
+
+```bash
+cd frontend
+npm run build
+```
+This will generate a `dist/` folder inside the `frontend/` directory containing all your static production files. 
+
+*Note: Since `dist/` is usually ignored by Git, you will need to upload this folder directly to your server later (e.g., using `scp`, `rsync`, or FileZilla).*
+
+## 2. Server: Install Prerequisites
+SSH into your Ubuntu server and install the required backend packages (Python, Nginx, and uv):
 
 ```bash
 sudo apt update
 sudo apt install -y nginx curl
-
-# Install Node.js (Version 18.x)
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
 
 # Install uv (Lightning-fast Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.cargo/env
 ```
 
-## 2. Setup the Application
+## 3. Server: Setup the Application
 Clone your repository into the `/var/www/` directory.
 
 ```bash
@@ -30,10 +39,19 @@ git clone https://github.com/your-username/webhook-forwarder.git /var/www/webhoo
 cd /var/www/webhook_forwarder
 ```
 
-## 3. Configure the Backend (FastAPI)
-Set up the Python virtual environment and install dependencies.
+**Upload the Frontend Build:**
+Now, upload the `frontend/dist/` folder that you built in Step 1 from your local computer to the server's `/var/www/webhook_forwarder/frontend/` directory.
+
+*(Example command to run from your local computer):*
+```bash
+scp -r ./frontend/dist/ your_user@your_server_ip:/var/www/webhook_forwarder/frontend/
+```
+
+## 4. Server: Configure the Backend (FastAPI)
+Set up the Python virtual environment and install dependencies using `uv`.
 
 ```bash
+cd /var/www/webhook_forwarder
 uv venv
 source .venv/bin/activate
 uv pip install -r requirements.txt
@@ -70,18 +88,8 @@ sudo systemctl start webhook-backend
 sudo systemctl enable webhook-backend
 ```
 
-## 4. Build the Frontend (React)
-Now, compile the React application into static HTML/JS/CSS files.
-
-```bash
-cd /var/www/webhook_forwarder/frontend
-npm install
-npm run build
-```
-*(This will generate a `dist/` folder containing your compiled frontend).*
-
-## 5. Configure Nginx
-Nginx will serve the React static files and forward API/WebSocket requests to your Python backend.
+## 5. Server: Configure Nginx
+Nginx will serve the compiled React static files and forward API/WebSocket requests to your Python backend.
 
 ```bash
 sudo nano /etc/nginx/sites-available/webhook_forwarder
@@ -93,7 +101,7 @@ server {
     listen 80;
     server_name your_domain.com; # Or your server's IP address
 
-    # Serve the React Frontend
+    # Serve the compiled React Frontend from the uploaded dist/ folder
     root /var/www/webhook_forwarder/frontend/dist;
     index index.html;
 
@@ -129,4 +137,4 @@ sudo systemctl restart nginx
 ```
 
 ## 6. Access Your Application
-That's it! Open your browser and navigate to `http://your_domain.com` (or your server's public IP). Your Webhook Forwarder is now live in production!
+That's it! Open your browser and navigate to `http://your_domain.com` (or your server's public IP). Your Webhook Forwarder is now live in production without needing Node.js on the server!
