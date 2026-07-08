@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { fetchApi, API_BASE_URL } from '../api';
 import toast from 'react-hot-toast';
-import { Typography, Box, Paper, FormControl, InputLabel, Select, MenuItem, Chip, Divider, Checkbox, FormControlLabel, Button, IconButton } from '@mui/material';
+import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -50,7 +50,7 @@ export default function LiveLogs() {
                 setLogs(data);
                 if (data.length > 0) setSelectedLogId(data[0].id);
             })
-            .catch(err => toast.error('Failed to load history logs'));
+            .catch(() => toast.error('Failed to load history logs'));
 
         const wsUrl = `ws://127.0.0.1:8000/api/ws/logs/${selectedEndpointId}`;
         const ws = new WebSocket(wsUrl);
