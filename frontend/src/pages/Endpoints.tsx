@@ -1,0 +1,342 @@
+import React, { useEffect, useState } from 'react';
+import { fetchApi, API_BASE_URL } from '../api';
+import toast from 'react-hot-toast';
+import { Typography, Box, Paper, TextField, Button, Select, MenuItem, InputLabel, FormControl, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddIcon from '@mui/icons-material/Add';
+import SendIcon from '@mui/icons-material/Send';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from '@mui/icons-material/Edit';
+import SecurityIcon from '@mui/icons-material/Security';
+
+interface Destination { id: number; url: string; is_active: boolean; }
+interface Endpoint { 
+    id: number; name: string; slug: string; project_id: string; 
+    auth_type: string; 
+    auth_config?: string | null; 
+    destinations: Destination[]; 
+}
+interface Project { id: string; name: string; }
+
+export default function Endpoints() {
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+    const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
+    
+    const [newEpName, setNewEpName] = useState('');
+    const [newEpSlug, setNewEpSlug] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const [newDestUrl, setNewDestUrl] = useState('');
+    const [activeEndpointId, setActiveEndpointId] = useState<number | null>(null);
+
+    const [newAuthType, setNewAuthType] = useState('none');
+    const [newAuthConfig, setNewAuthConfig] = useState<{ [key: string]: string }>({});
+
+    const [editEndpoint, setEditEndpoint] = useState<Endpoint | null>(null);
+
+    useEffect(() => { loadProjects(); }, []);
+    useEffect(() => {
+        if (selectedProjectId) loadEndpoints(selectedProjectId);
+        else setEndpoints([]);
+    }, [selectedProjectId]);
+
+    const loadProjects = async () => {
+        try { setProjects(await fetchApi('/api/projects')); }
+        catch (err) { console.error(err); }
+    };
+
+    const loadEndpoints = async (projId: string) => {
+        try { setEndpoints(await fetchApi(`/api/endpoints?project_id=${projId}`)); }
+        catch (err) { console.error(err); }
+    };
+
+    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setNewEpName(val);
+        setNewEpSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''));
+    };
+
+    const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewEpSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+    };
+
+    const handleCreateEndpoint = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreating(true);
+        try {
+            await fetchApi('/api/endpoints', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    name: newEpName, 
+                    slug: newEpSlug, 
+                    project_id: selectedProjectId,
+                    auth_type: newAuthType,
+                    auth_config: Object.keys(newAuthConfig).length > 0 ? JSON.stringify(newAuthConfig) : null
+                })
+            });
+            setNewEpName(''); setNewEpSlug('');
+            setNewAuthType('none'); setNewAuthConfig({});
+            loadEndpoints(selectedProjectId);
+            toast.success('Endpoint created!');
+        } catch (err: any) { toast.error(err.message); }
+        finally { setIsCreating(false); }
+    };
+
+    const handleUpdateEndpoint = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editEndpoint) return;
+        try {
+            await fetchApi(`/api/endpoints/${editEndpoint.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: editEndpoint.name,
+                    slug: editEndpoint.slug,
+                    project_id: editEndpoint.project_id,
+                    auth_type: editEndpoint.auth_type,
+                    auth_config: editEndpoint.auth_config
+                })
+            });
+            toast.success('Endpoint updated!');
+            setEditEndpoint(null);
+            loadEndpoints(selectedProjectId);
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to update endpoint');
+        }
+    };
+
+    const handleDeleteEndpoint = async (id: number) => {
+        if (!confirm('Delete this endpoint?')) return;
+        try {
+            await fetchApi(`/api/endpoints/${id}`, { method: 'DELETE' });
+            loadEndpoints(selectedProjectId);
+            toast.success('Endpoint deleted');
+        } catch (err: any) { toast.error(err.message); }
+    };
+
+    const handleAddDestination = async (e: React.FormEvent, epId: number) => {
+        e.preventDefault();
+        try {
+            await fetchApi(`/api/endpoints/${epId}/destinations`, {
+                method: 'POST',
+                body: JSON.stringify({ url: newDestUrl })
+            });
+            setNewDestUrl('');
+            setActiveEndpointId(null);
+            loadEndpoints(selectedProjectId);
+            toast.success('Destination added!');
+        } catch (err: any) { toast.error(err.message); }
+    };
+
+    return (
+        <Box>
+            <Typography variant="h4" sx={{ fontWeight: 600 }} gutterBottom>Endpoints</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                Manage webhook receivers and forwarding destinations
+            </Typography>
+
+            <Paper sx={{ p: 3, mb: 4 }} elevation={1}>
+                <FormControl fullWidth size="small">
+                    <InputLabel id="project-select-label">Select Project Context</InputLabel>
+                    <Select
+                        labelId="project-select-label"
+                        value={selectedProjectId}
+                        label="Select Project Context"
+                        onChange={e => setSelectedProjectId(e.target.value)}
+                    >
+                        <MenuItem value=""><em>-- Choose Project --</em></MenuItem>
+                        {projects.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+                    </Select>
+                </FormControl>
+            </Paper>
+
+            {selectedProjectId && (
+                <>
+                    <Paper sx={{ p: 3, mb: 4 }} elevation={1}>
+                        <Typography variant="h6" gutterBottom>New Endpoint</Typography>
+                        <Box component="form" onSubmit={handleCreateEndpoint} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                <TextField size="small" label="Name" value={newEpName} onChange={handleNameChange} required fullWidth />
+                                <TextField size="small" label="Slug (URL Path)" value={newEpSlug} onChange={handleSlugChange} required fullWidth placeholder="meta-waba-v1" helperText="Only lowercase letters, numbers, and hyphens" />
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Authentication Type</InputLabel>
+                                    <Select value={newAuthType} label="Authentication Type" onChange={e => { setNewAuthType(e.target.value); setNewAuthConfig({}); }}>
+                                        <MenuItem value="none">None (Open)</MenuItem>
+                                        <MenuItem value="meta">Meta Challenge Handshake</MenuItem>
+                                        <MenuItem value="basic">Basic Auth</MenuItem>
+                                        <MenuItem value="bearer">Bearer Token</MenuItem>
+                                        <MenuItem value="hmac">HMAC Signature</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
+                            
+                            {newAuthType === 'meta' && (
+                                <TextField size="small" label="Verify Token" value={newAuthConfig.verify_token || ''} onChange={e => setNewAuthConfig({...newAuthConfig, verify_token: e.target.value})} required fullWidth helperText="Token configured in Meta App Dashboard" />
+                            )}
+                            
+                            {newAuthType === 'basic' && (
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField size="small" label="Username" value={newAuthConfig.username || ''} onChange={e => setNewAuthConfig({...newAuthConfig, username: e.target.value})} required fullWidth />
+                                    <TextField size="small" label="Password" type="password" value={newAuthConfig.password || ''} onChange={e => setNewAuthConfig({...newAuthConfig, password: e.target.value})} required fullWidth />
+                                </Box>
+                            )}
+
+                            {newAuthType === 'bearer' && (
+                                <TextField size="small" label="Bearer Token" value={newAuthConfig.token || ''} onChange={e => setNewAuthConfig({...newAuthConfig, token: e.target.value})} required fullWidth helperText="Secret token clients must provide" />
+                            )}
+
+                            {newAuthType === 'hmac' && (
+                                <Box sx={{ display: 'flex', gap: 2 }}>
+                                    <TextField size="small" label="Header Name" value={newAuthConfig.header_name || ''} onChange={e => setNewAuthConfig({...newAuthConfig, header_name: e.target.value})} placeholder="x-hub-signature" required fullWidth />
+                                    <TextField size="small" label="Secret Key" value={newAuthConfig.secret || ''} onChange={e => setNewAuthConfig({...newAuthConfig, secret: e.target.value})} required fullWidth />
+                                    <FormControl fullWidth size="small">
+                                        <InputLabel>Algorithm</InputLabel>
+                                        <Select value={newAuthConfig.algorithm || 'sha256'} label="Algorithm" onChange={e => setNewAuthConfig({...newAuthConfig, algorithm: e.target.value})}>
+                                            <MenuItem value="sha256">SHA-256</MenuItem>
+                                            <MenuItem value="sha1">SHA-1</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Box>
+                            )}
+
+                            <Button type="submit" variant="contained" disabled={isCreating} sx={{ alignSelf: 'flex-start', mt: 1 }}>
+                                Create Endpoint
+                            </Button>
+                        </Box>
+                    </Paper>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        {endpoints.map(ep => (
+                            <Card key={ep.id} elevation={1}>
+                                <CardContent>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                        <Box>
+                                            <Typography variant="h6">{ep.name}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mt: 1 }}>
+                                                <Typography variant="body2" color="primary" sx={{ fontFamily: 'monospace' }}>
+                                                    {API_BASE_URL}/webhook/{ep.project_id}/{ep.slug}
+                                                </Typography>
+                                                <Button 
+                                                    size="small" 
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(`${API_BASE_URL}/webhook/${ep.project_id}/${ep.slug}`);
+                                                        toast.success('Webhook URL Copied!');
+                                                    }}
+                                                    sx={{ minWidth: 'auto', p: 0.5 }}
+                                                    title="Copy URL"
+                                                >
+                                                    <ContentCopyIcon fontSize="small" />
+                                                </Button>
+                                            </Box>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button size="small" color="primary" startIcon={<EditIcon />} onClick={() => setEditEndpoint({...ep})}>
+                                                Edit
+                                            </Button>
+                                            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteEndpoint(ep.id)}>
+                                                Delete
+                                            </Button>
+                                        </Box>
+                                    </Box>
+                                    <Divider sx={{ mb: 2 }} />
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>FORWARDING DESTINATIONS</Typography>
+                                    <List dense>
+                                        {ep.destinations.map(d => (
+                                            <ListItem key={d.id} disablePadding sx={{ mb: 1 }}>
+                                                <ListItemIcon sx={{ minWidth: 36 }}><SendIcon color="action" fontSize="small" /></ListItemIcon>
+                                                <ListItemText primary={d.url} />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                    
+                                    {activeEndpointId === ep.id ? (
+                                        <Box component="form" onSubmit={(e) => handleAddDestination(e, ep.id)} sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                                            <TextField size="small" type="url" label="Destination URL" value={newDestUrl} onChange={e => setNewDestUrl(e.target.value)} required fullWidth placeholder="https://api.myapp.com/webhook" />
+                                            <Button type="submit" variant="contained" size="small">Save</Button>
+                                            <Button variant="text" size="small" onClick={() => setActiveEndpointId(null)}>Cancel</Button>
+                                        </Box>
+                                    ) : (
+                                        <Button size="small" startIcon={<AddIcon />} onClick={() => setActiveEndpointId(ep.id)} sx={{ mt: 1 }}>
+                                            Add Destination
+                                        </Button>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </Box>
+                </>
+            )}
+
+            {editEndpoint && (
+                <Dialog open={!!editEndpoint} onClose={() => setEditEndpoint(null)} maxWidth="sm" fullWidth>
+                    <DialogTitle>Edit Endpoint</DialogTitle>
+                    <Box component="form" onSubmit={handleUpdateEndpoint}>
+                        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <TextField size="small" label="Name" value={editEndpoint.name} onChange={e => setEditEndpoint({...editEndpoint, name: e.target.value})} required fullWidth />
+                            <TextField size="small" label="Slug (URL Path)" value={editEndpoint.slug} onChange={e => setEditEndpoint({...editEndpoint, slug: e.target.value})} required fullWidth />
+                            
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Authentication Type</InputLabel>
+                                <Select value={editEndpoint.auth_type} label="Authentication Type" onChange={e => setEditEndpoint({...editEndpoint, auth_type: e.target.value, auth_config: null})}>
+                                    <MenuItem value="none">None (Open)</MenuItem>
+                                    <MenuItem value="meta">Meta Challenge Handshake</MenuItem>
+                                    <MenuItem value="basic">Basic Auth</MenuItem>
+                                    <MenuItem value="bearer">Bearer Token</MenuItem>
+                                    <MenuItem value="hmac">HMAC Signature</MenuItem>
+                                </Select>
+                            </FormControl>
+
+                            {/* Render Auth Config fields based on auth_type, parsing JSON string to object for editing */}
+                            {(() => {
+                                let config: any = {};
+                                try { config = JSON.parse(editEndpoint.auth_config || '{}'); } catch {}
+                                
+                                const updateConfig = (newCfg: any) => {
+                                    setEditEndpoint({...editEndpoint, auth_config: JSON.stringify({...config, ...newCfg})});
+                                };
+
+                                if (editEndpoint.auth_type === 'meta') {
+                                    return <TextField size="small" label="Verify Token" value={config.verify_token || ''} onChange={e => updateConfig({verify_token: e.target.value})} required fullWidth />;
+                                }
+                                if (editEndpoint.auth_type === 'basic') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Username" value={config.username || ''} onChange={e => updateConfig({username: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Password" type="password" value={config.password || ''} onChange={e => updateConfig({password: e.target.value})} required fullWidth />
+                                        </Box>
+                                    );
+                                }
+                                if (editEndpoint.auth_type === 'bearer') {
+                                    return <TextField size="small" label="Bearer Token" value={config.token || ''} onChange={e => updateConfig({token: e.target.value})} required fullWidth />;
+                                }
+                                if (editEndpoint.auth_type === 'hmac') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Header Name" value={config.header_name || ''} onChange={e => updateConfig({header_name: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Secret Key" value={config.secret || ''} onChange={e => updateConfig({secret: e.target.value})} required fullWidth />
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Algorithm</InputLabel>
+                                                <Select value={config.algorithm || 'sha256'} label="Algorithm" onChange={e => updateConfig({algorithm: e.target.value})}>
+                                                    <MenuItem value="sha256">SHA-256</MenuItem>
+                                                    <MenuItem value="sha1">SHA-1</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Box>
+                                    );
+                                }
+                                return null;
+                            })()}
+
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setEditEndpoint(null)}>Cancel</Button>
+                            <Button type="submit" variant="contained">Save Changes</Button>
+                        </DialogActions>
+                    </Box>
+                </Dialog>
+            )}
+        </Box>
+    );
+}
