@@ -128,5 +128,17 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-## 6. Access Your Application
+## 6. Server: Enable SSL (HTTPS)
+To secure your webhooks, it is highly recommended to install a free SSL certificate using Let's Encrypt via Certbot.
+
+```bash
+# Install Certbot for Nginx
+sudo apt install -y certbot python3-certbot-nginx
+
+# Request and apply the SSL certificate (replace with your domain)
+sudo certbot --nginx -d your_domain.com -d www.your_domain.com
+```
+Certbot will automatically update your Nginx configuration to support HTTPS and set up a cron job to automatically renew the certificate before it expires.
+
+## 7. Access Your Application
 That's it! Open your browser and navigate to `http://your_domain.com` (or your server's public IP). Your Webhook Forwarder is now live in production without needing Node.js on the server!
