@@ -39,14 +39,6 @@ git clone https://github.com/nusagates/webhook_forwarder.git /var/www/webhook_fo
 cd /var/www/webhook_forwarder
 ```
 
-**Upload the Frontend Build:**
-Now, upload the `frontend/dist/` folder that you built in Step 1 from your local computer to the server's `/var/www/webhook_forwarder/frontend/` directory.
-
-*(Example command to run from your local computer):*
-```bash
-scp -r ./frontend/dist/ your_user@your_server_ip:/var/www/webhook_forwarder/frontend/
-```
-
 ## 4. Server: Configure the Backend (FastAPI)
 Set up the Python virtual environment and install dependencies using `uv`.
 
