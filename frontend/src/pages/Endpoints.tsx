@@ -26,6 +26,8 @@ export default function Endpoints() {
     const [isCreating, setIsCreating] = useState(false);
     const [newDestUrl, setNewDestUrl] = useState('');
     const [activeEndpointId, setActiveEndpointId] = useState<number | null>(null);
+    const [newDestAuthType, setNewDestAuthType] = useState('none');
+    const [newDestAuthConfig, setNewDestAuthConfig] = useState<{ [key: string]: string }>({});
 
     const [newAuthType, setNewAuthType] = useState('none');
     const [newAuthConfig, setNewAuthConfig] = useState<{ [key: string]: string }>({});
@@ -145,11 +147,13 @@ export default function Endpoints() {
                 method: 'POST',
                 body: JSON.stringify({ 
                     url: newDestUrl,
-                    auth_type: 'none',
-                    auth_config: null
+                    auth_type: newDestAuthType,
+                    auth_config: Object.keys(newDestAuthConfig).length > 0 ? JSON.stringify(newDestAuthConfig) : null
                 })
             });
             setNewDestUrl('');
+            setNewDestAuthType('none');
+            setNewDestAuthConfig({});
             setActiveEndpointId(null);
             loadEndpoints(selectedProjectId);
             toast.success('Destination added!');
@@ -173,8 +177,8 @@ export default function Endpoints() {
                 method: 'POST',
                 body: JSON.stringify({
                     url: newDestUrl,
-                    auth_type: 'none',
-                    auth_config: null
+                    auth_type: newDestAuthType,
+                    auth_config: Object.keys(newDestAuthConfig).length > 0 ? JSON.stringify(newDestAuthConfig) : null
                 })
             });
             toast.success(`Success! ${res.message}`, { id: tid });
@@ -346,6 +350,36 @@ export default function Endpoints() {
                                                     Add
                                                 </Button>
                                             </Box>
+                                            
+                                            {activeEndpointId === ep.id && (
+                                                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                                    <FormControl size="small" sx={{ minWidth: 150 }}>
+                                                        <InputLabel>Auth Type</InputLabel>
+                                                        <Select value={newDestAuthType} label="Auth Type" onChange={e => setNewDestAuthType(e.target.value)}>
+                                                            <MenuItem value="none">None</MenuItem>
+                                                            <MenuItem value="basic">Basic Auth</MenuItem>
+                                                            <MenuItem value="bearer">Bearer Token</MenuItem>
+                                                            <MenuItem value="custom_header">Custom Header</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    
+                                                    {newDestAuthType === 'basic' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Username" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, username: e.target.value})} />
+                                                            <TextField size="small" placeholder="Password" fullWidth type="password" onChange={e => setNewDestAuthConfig({...newDestAuthConfig, password: e.target.value})} />
+                                                        </Box>
+                                                    )}
+                                                    {newDestAuthType === 'bearer' && (
+                                                        <TextField size="small" placeholder="Token" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, token: e.target.value})} />
+                                                    )}
+                                                    {newDestAuthType === 'custom_header' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Header Name (e.g., x-api-key)" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_name: e.target.value})} />
+                                                            <TextField size="small" placeholder="Header Value" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_value: e.target.value})} />
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            )}
                                         </Box>
                                     )}
                                 </CardContent>
