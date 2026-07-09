@@ -24,7 +24,8 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     
     if (response.status === 401) {
         localStorage.removeItem('token');
-        if (window.location.pathname !== '/login') {
+        const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/blocked'];
+        if (!publicPaths.includes(window.location.pathname)) {
             window.location.href = '/login';
         }
         throw new Error('Session expired or unauthorized');
