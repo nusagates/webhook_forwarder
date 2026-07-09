@@ -5,8 +5,10 @@ import { Typography, Box, TextField, Button, Card, CardContent, CardActions, Dia
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import ShareIcon from '@mui/icons-material/Share';
+import ProjectShareDialog from '../components/ProjectShareDialog';
 
-interface Project { id: string; name: string; description?: string; }
+interface Project { id: string; name: string; description?: string; my_role: string; }
 
 export default function Projects() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -17,6 +19,10 @@ export default function Projects() {
     const [editId, setEditId] = useState<string | null>(null);
     const [projName, setProjName] = useState('');
     const [projDesc, setProjDesc] = useState('');
+    
+    // Sharing State
+    const [shareProjectId, setShareProjectId] = useState<string | null>(null);
+    const [shareProjectRole, setShareProjectRole] = useState('');
 
     useEffect(() => { loadProjects(); }, []);
 
@@ -102,23 +108,56 @@ export default function Projects() {
                     {projects.map(p => (
                         <Card elevation={1} key={p.id}>
                             <CardContent>
-                                <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>{p.name}</Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>{p.name}</Typography>
+                                    <Typography variant="caption" sx={{ 
+                                        bgcolor: p.my_role === 'owner' ? '#e3f2fd' : p.my_role === 'editor' ? '#fff3e0' : '#f5f5f5', 
+                                        color: p.my_role === 'owner' ? '#1976d2' : p.my_role === 'editor' ? '#ed6c02' : '#757575',
+                                        px: 1, py: 0.5, borderRadius: 1, fontWeight: 'bold' 
+                                    }}>
+                                        {p.my_role.toUpperCase()}
+                                    </Typography>
+                                </Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1, minHeight: '40px' }}>
                                     {p.description || 'No description provided.'}
                                 </Typography>
                             </CardContent>
                             <CardActions sx={{ justifyContent: 'flex-end', gap: 1, px: 2, pb: 2 }}>
-                                <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => handleOpenDialog(p)}>
-                                    Edit
-                                </Button>
-                                <Button size="small" color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => handleDelete(p.id)}>
-                                    Delete
-                                </Button>
+                                {p.my_role === 'owner' && (
+                                    <Button size="small" color="secondary" variant="outlined" startIcon={<ShareIcon />} onClick={() => {
+                                        setShareProjectId(p.id);
+                                        setShareProjectRole(p.my_role);
+                                    }}>
+                                        Share
+                                    </Button>
+                                )}
+                                {(p.my_role === 'owner' || p.my_role === 'editor') && (
+                                    <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => handleOpenDialog(p)}>
+                                        Edit
+                                    </Button>
+                                )}
+                                {p.my_role === 'owner' && (
+                                    <Button size="small" color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => handleDelete(p.id)}>
+                                        Delete
+                                    </Button>
+                                )}
+                                {p.my_role === 'viewer' && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto', fontStyle: 'italic' }}>
+                                        View Only
+                                    </Typography>
+                                )}
                             </CardActions>
                         </Card>
                     ))}
                 </Box>
             )}
+
+            <ProjectShareDialog 
+                open={!!shareProjectId} 
+                onClose={() => { setShareProjectId(null); loadProjects(); }}
+                projectId={shareProjectId || ''}
+                projectRole={shareProjectRole}
+            />
 
             <Dialog open={isDialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
                 <form onSubmit={handleSaveProject}>

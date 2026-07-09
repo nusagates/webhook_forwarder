@@ -22,6 +22,17 @@ class Project(Base):
     
     owner = relationship("User", back_populates="projects")
     endpoints = relationship("Endpoint", back_populates="project", cascade="all, delete-orphan")
+    members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
+
+class ProjectMember(Base):
+    __tablename__ = "project_members"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role = Column(String) # 'viewer', 'editor'
+    
+    project = relationship("Project", back_populates="members")
+    user = relationship("User")
 
 class Endpoint(Base):
     __tablename__ = "endpoints"

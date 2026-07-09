@@ -67,6 +67,22 @@ class Endpoint(BaseModel):
     class Config:
         from_attributes = True
 
+# Project Member Schemas
+class ProjectMemberBase(BaseModel):
+    role: str
+
+class ProjectMemberCreate(ProjectMemberBase):
+    email: EmailStr
+
+class ProjectMember(ProjectMemberBase):
+    id: int
+    project_id: str
+    user_id: int
+    user: User
+    
+    class Config:
+        from_attributes = True
+
 # Project Schemas
 class ProjectBase(BaseModel):
     name: str
@@ -78,7 +94,9 @@ class ProjectCreate(ProjectBase):
 class Project(ProjectBase):
     id: str
     user_id: int
+    my_role: str = "owner"
     endpoints: List[Endpoint] = []
+    members: List[ProjectMember] = []
     class Config:
         from_attributes = True
 

@@ -3,7 +3,6 @@ import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { Typography, Box, Paper, TextField, Button, Select, MenuItem, InputLabel, FormControl, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,7 +14,7 @@ interface Endpoint {
     auth_config?: string | null; 
     destinations: Destination[]; 
 }
-interface Project { id: string; name: string; }
+interface Project { id: string; name: string; my_role?: string; }
 
 export default function Endpoints() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -48,6 +47,9 @@ export default function Endpoints() {
         try { setEndpoints(await fetchApi(`/api/endpoints?project_id=${projId}`)); }
         catch (err) { console.error(err); }
     };
+    
+    const selectedProject = projects.find(p => p.id === selectedProjectId);
+    const isViewer = selectedProject?.my_role === 'viewer';
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -112,7 +114,16 @@ export default function Endpoints() {
         } catch (err: any) { toast.error(err.message); }
     };
 
-    const handleAddDestination = async (e: React.FormEvent, epId: number) => {
+    const handleDeleteDestination = async (epId: number, destId: number) => {
+        if (!confirm('Remove this destination?')) return;
+        try {
+            await fetchApi(`/api/endpoints/${epId}/destinations/${destId}`, { method: 'DELETE' });
+            loadEndpoints(selectedProjectId);
+            toast.success('Destination removed');
+        } catch (err: any) { toast.error(err.message); }
+    };
+
+    const handleAddDestination = async (e: React.FormEvent | React.MouseEvent, epId: number) => {
         e.preventDefault();
         try {
             await fetchApi(`/api/endpoints/${epId}/destinations`, {
@@ -148,7 +159,7 @@ export default function Endpoints() {
                 </FormControl>
             </Paper>
 
-            {selectedProjectId && (
+            {selectedProjectId && !isViewer && (
                 <>
                     <Paper sx={{ p: 3, mb: 4 }} elevation={1}>
                         <Typography variant="h6" gutterBottom>New Endpoint</Typography>
@@ -205,6 +216,12 @@ export default function Endpoints() {
                             </Button>
                         </Box>
                     </Paper>
+                </>
+            )}
+
+            {selectedProjectId && (
+                <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', md: 'row' } }}>
+                    <Box sx={{ flex: 1, minWidth: '300px' }}>
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         {endpoints.map(ep => (
@@ -231,41 +248,65 @@ export default function Endpoints() {
                                             </Box>
                                         </Box>
                                         <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button size="small" color="primary" startIcon={<EditIcon />} onClick={() => setEditEndpoint({...ep})}>
-                                                Edit
-                                            </Button>
-                                            <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteEndpoint(ep.id)}>
-                                                Delete
-                                            </Button>
+                                            {!isViewer && (
+                                                <Button size="small" color="primary" startIcon={<EditIcon />} onClick={() => setEditEndpoint({...ep})}>
+                                                    Edit
+                                                </Button>
+                                            )}
+                                            {!isViewer && (
+                                                <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => handleDeleteEndpoint(ep.id)}>
+                                                    Delete
+                                                </Button>
+                                            )}
                                         </Box>
                                     </Box>
                                     <Divider sx={{ mb: 2 }} />
                                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>FORWARDING DESTINATIONS</Typography>
                                     <List dense>
-                                        {ep.destinations.map(d => (
-                                            <ListItem key={d.id} disablePadding sx={{ mb: 1 }}>
+                                        {ep.destinations.map(dest => (
+                                            <ListItem key={dest.id} disablePadding sx={{ mb: 1 }}>
                                                 <ListItemIcon sx={{ minWidth: 36 }}><SendIcon color="action" fontSize="small" /></ListItemIcon>
-                                                <ListItemText primary={d.url} />
+                                                <ListItemText 
+                                                    primary={dest.url} 
+                                                    secondary={dest.is_active ? 'Active' : 'Inactive'} 
+                                                />
+                                                {!isViewer && (
+                                                    <Button size="small" color="error" onClick={() => handleDeleteDestination(ep.id, dest.id)}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </Button>
+                                                )}
                                             </ListItem>
                                         ))}
                                     </List>
                                     
-                                    {activeEndpointId === ep.id ? (
-                                        <Box component="form" onSubmit={(e) => handleAddDestination(e, ep.id)} sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                                            <TextField size="small" type="url" label="Destination URL" value={newDestUrl} onChange={e => setNewDestUrl(e.target.value)} required fullWidth placeholder="https://api.myapp.com/webhook" />
-                                            <Button type="submit" variant="contained" size="small">Save</Button>
-                                            <Button variant="text" size="small" onClick={() => setActiveEndpointId(null)}>Cancel</Button>
+                                    {!isViewer && (
+                                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                                            <TextField 
+                                                size="small" 
+                                                placeholder="Add new destination URL" 
+                                                fullWidth
+                                                value={activeEndpointId === ep.id ? newDestUrl : ''}
+                                                onChange={e => {
+                                                    setActiveEndpointId(ep.id);
+                                                    setNewDestUrl(e.target.value);
+                                                }}
+                                            />
+                                            <Button 
+                                                variant="contained" 
+                                                size="small"
+                                                disabled={!newDestUrl || activeEndpointId !== ep.id}
+                                                onClick={(e) => handleAddDestination(e, ep.id)}
+                                            >
+                                                Add
+                                            </Button>
                                         </Box>
-                                    ) : (
-                                        <Button size="small" startIcon={<AddIcon />} onClick={() => setActiveEndpointId(ep.id)} sx={{ mt: 1 }}>
-                                            Add Destination
-                                        </Button>
                                     )}
                                 </CardContent>
                             </Card>
                         ))}
+                        </Box>
                     </Box>
-                </>
+                </Box>
             )}
 
             {editEndpoint && (

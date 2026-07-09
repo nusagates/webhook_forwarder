@@ -188,9 +188,33 @@ def delete_user(request: schemas.UserDeleteRequest, current_user: models.User = 
     return {"status": "success", "message": "User deleted successfully"}
 
 # --- Project API Routes ---
+def get_project_with_role(db: Session, project_id: str, user_id: int):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        return None, None
+    if project.user_id == user_id:
+        return project, "owner"
+    
+    member = db.query(models.ProjectMember).filter(models.ProjectMember.project_id == project_id, models.ProjectMember.user_id == user_id).first()
+    if member:
+        return project, member.role
+    
+    return None, None
+
 @app.get("/api/projects", response_model=List[schemas.Project])
 def read_projects(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Project).filter(models.Project.user_id == current_user.id).all()
+    owned_projects = db.query(models.Project).filter(models.Project.user_id == current_user.id).all()
+    for p in owned_projects:
+        p.my_role = "owner"
+        
+    member_projects_records = db.query(models.ProjectMember).filter(models.ProjectMember.user_id == current_user.id).all()
+    shared_projects = []
+    for mp in member_projects_records:
+        if mp.project:
+            mp.project.my_role = mp.role
+            shared_projects.append(mp.project)
+            
+    return owned_projects + shared_projects
 
 @app.post("/api/projects", response_model=schemas.Project)
 def create_project(project: schemas.ProjectCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
@@ -202,21 +226,22 @@ def create_project(project: schemas.ProjectCreate, current_user: models.User = D
 
 @app.put("/api/projects/{project_id}", response_model=schemas.Project)
 def update_project(project_id: str, project_data: schemas.ProjectCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.user_id == current_user.id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this project")
     
     project.name = project_data.name
     project.description = project_data.description
     db.commit()
     db.refresh(project)
+    project.my_role = role
     return project
 
 @app.get("/api/endpoints", response_model=List[schemas.Endpoint])
 def read_endpoints(project_id: str, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.user_id == current_user.id).first()
+    project, role = get_project_with_role(db, project_id, current_user.id)
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=403, detail="Not authorized to view this project")
     return db.query(models.Endpoint).filter(models.Endpoint.project_id == project_id).all()
 
 @app.post("/api/endpoints", response_model=schemas.Endpoint)
@@ -225,9 +250,9 @@ def create_endpoint(endpoint: schemas.EndpointCreate, current_user: models.User 
         raise HTTPException(status_code=400, detail="Slug can only contain lowercase letters, numbers, and hyphens")
         
     # Verify project belongs to user
-    project = db.query(models.Project).filter(models.Project.id == endpoint.project_id, models.Project.user_id == current_user.id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to create endpoints in this project")
         
     db_endpoint = db.query(models.Endpoint).filter(models.Endpoint.slug == endpoint.slug, models.Endpoint.project_id == endpoint.project_id).first()
     if db_endpoint:
@@ -247,9 +272,13 @@ def create_endpoint(endpoint: schemas.EndpointCreate, current_user: models.User 
 
 @app.put("/api/endpoints/{endpoint_id}", response_model=schemas.Endpoint)
 def update_endpoint(endpoint_id: int, endpoint_update: schemas.EndpointCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    endpoint = db.query(models.Endpoint).join(models.Project).filter(models.Endpoint.id == endpoint_id, models.Project.user_id == current_user.id).first()
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to edit endpoints in this project")
         
     endpoint.name = endpoint_update.name
     endpoint.slug = endpoint_update.slug
@@ -262,9 +291,13 @@ def update_endpoint(endpoint_id: int, endpoint_update: schemas.EndpointCreate, c
 
 @app.post("/api/endpoints/{endpoint_id}/destinations", response_model=schemas.Destination)
 def create_destination(endpoint_id: int, destination: schemas.DestinationCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    endpoint = db.query(models.Endpoint).join(models.Project).filter(models.Endpoint.id == endpoint_id, models.Project.user_id == current_user.id).first()
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to add destinations in this project")
     
     new_dest = models.Destination(url=destination.url, is_active=destination.is_active, endpoint_id=endpoint_id)
     db.add(new_dest)
@@ -274,37 +307,48 @@ def create_destination(endpoint_id: int, destination: schemas.DestinationCreate,
 
 @app.delete("/api/projects/{project_id}")
 def delete_project(project_id: str, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id, models.Project.user_id == current_user.id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can delete the project")
     db.delete(project)
     db.commit()
     return {"status": "success"}
 
 @app.delete("/api/endpoints/{endpoint_id}")
 def delete_endpoint(endpoint_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    endpoint = db.query(models.Endpoint).join(models.Project).filter(models.Endpoint.id == endpoint_id, models.Project.user_id == current_user.id).first()
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete endpoints in this project")
     db.delete(endpoint)
     db.commit()
     return {"status": "success"}
 
 @app.get("/api/logs", response_model=List[schemas.DeliveryLog])
 def get_logs(endpoint_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    endpoint = db.query(models.Endpoint).join(models.Project).filter(models.Endpoint.id == endpoint_id, models.Project.user_id == current_user.id).first()
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project:
+        raise HTTPException(status_code=403, detail="Not authorized to view this project")
     return db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).order_by(models.DeliveryLog.created_at.desc()).limit(100).all()
 
 @app.delete("/api/logs/{log_id}")
 def delete_log(log_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
-    log = db.query(models.DeliveryLog).join(models.Endpoint).join(models.Project).filter(
-        models.DeliveryLog.id == log_id, 
-        models.Project.user_id == current_user.id
-    ).first()
+    log = db.query(models.DeliveryLog).filter(models.DeliveryLog.id == log_id).first()
     if not log:
         raise HTTPException(status_code=404, detail="Log not found")
+        
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == log.endpoint_id).first()
+    if endpoint:
+        project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+        if not project or role not in ["owner", "editor"]:
+            raise HTTPException(status_code=403, detail="Not authorized to delete logs in this project")
     
     db.delete(log)
     db.commit()
@@ -323,3 +367,91 @@ async def websocket_endpoint(websocket: WebSocket, endpoint_id: int):
     except WebSocketDisconnect:
         manager.disconnect(websocket, endpoint_id)
 
+
+# --- Project Member Routes ---
+
+@app.post("/api/projects/{project_id}/members", response_model=schemas.ProjectMember)
+def add_project_member(project_id: str, member_in: schemas.ProjectMemberCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can add members")
+        
+    target_user = db.query(models.User).filter(models.User.email == member_in.email).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User with this email not found")
+        
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot add yourself as a member")
+        
+    existing_member = db.query(models.ProjectMember).filter(models.ProjectMember.project_id == project_id, models.ProjectMember.user_id == target_user.id).first()
+    if existing_member:
+        raise HTTPException(status_code=400, detail="User is already a member of this project")
+        
+    if member_in.role not in ["viewer", "editor"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    new_member = models.ProjectMember(project_id=project_id, user_id=target_user.id, role=member_in.role)
+    db.add(new_member)
+    db.commit()
+    db.refresh(new_member)
+    return new_member
+
+@app.put("/api/projects/{project_id}/members/{member_id}", response_model=schemas.ProjectMember)
+def update_project_member(project_id: str, member_id: int, member_in: schemas.ProjectMemberBase, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can update members")
+        
+    member = db.query(models.ProjectMember).filter(models.ProjectMember.id == member_id, models.ProjectMember.project_id == project_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+        
+    if member_in.role not in ["viewer", "editor"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    member.role = member_in.role
+    db.commit()
+    db.refresh(member)
+    return member
+
+@app.delete("/api/projects/{project_id}/members/{member_id}")
+def delete_project_member(project_id: str, member_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can remove members")
+        
+    member = db.query(models.ProjectMember).filter(models.ProjectMember.id == member_id, models.ProjectMember.project_id == project_id).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+        
+    db.delete(member)
+    db.commit()
+    return {"status": "success"}
+
+@app.post("/api/projects/{project_id}/transfer")
+def transfer_project_ownership(project_id: str, member_in: schemas.ProjectMemberCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can transfer ownership")
+        
+    target_user = db.query(models.User).filter(models.User.email == member_in.email).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User with this email not found")
+        
+    if target_user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot transfer ownership to yourself")
+        
+    # Remove target user from project_members if they exist
+    existing_member = db.query(models.ProjectMember).filter(models.ProjectMember.project_id == project_id, models.ProjectMember.user_id == target_user.id).first()
+    if existing_member:
+        db.delete(existing_member)
+        
+    # Transfer ownership
+    project.user_id = target_user.id
+    
+    # Add current user as an editor so they don't lose access completely
+    new_editor = models.ProjectMember(project_id=project_id, user_id=current_user.id, role="editor")
+    db.add(new_editor)
+    
+    db.commit()
+    return {"status": "success", "message": "Ownership transferred successfully"}

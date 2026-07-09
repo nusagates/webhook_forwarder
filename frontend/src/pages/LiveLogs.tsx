@@ -18,7 +18,7 @@ interface DeliveryLog {
     created_at: string;
 }
 interface Endpoint { id: number; name: string; slug: string; project_id: string; }
-interface Project { id: string; name: string; }
+interface Project { id: string; name: string; my_role?: string; }
 
 export default function LiveLogs() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -95,6 +95,8 @@ export default function LiveLogs() {
     };
 
     const selectedLog = logs.find(l => l.id === selectedLogId) || logs[0];
+    const selectedProject = projects.find(p => p.id === selectedProjectId);
+    const isViewer = selectedProject?.my_role === 'viewer';
 
     const getFormattedPayload = (payload: string) => {
         if (!formatJson) return payload;
@@ -208,27 +210,29 @@ export default function LiveLogs() {
                                     <Typography variant="caption" sx={{ opacity: 0.8 }}>
                                         {new Date(log.created_at).toLocaleString()}
                                     </Typography>
-                                    <Box 
-                                        className="delete-btn"
-                                        onClick={(e) => handleDeleteLog(e, log.id)}
-                                        sx={{
-                                            position: 'absolute',
-                                            right: 8,
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            bgcolor: '#d9534f',
-                                            color: '#fff',
-                                            borderRadius: 1,
-                                            width: 24,
-                                            height: 24,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer',
-                                            '&:hover': { bgcolor: '#c9302c' }
-                                        }}
-                                    >
-                                        <ClearIcon sx={{ fontSize: 16 }} />
-                                    </Box>
+                                    {!isViewer && (
+                                        <Box 
+                                            className="delete-btn"
+                                            onClick={(e) => handleDeleteLog(e, log.id)}
+                                            sx={{
+                                                position: 'absolute',
+                                                right: 8,
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                bgcolor: '#d9534f',
+                                                color: '#fff',
+                                                borderRadius: 1,
+                                                width: 24,
+                                                height: 24,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                '&:hover': { bgcolor: '#c9302c' }
+                                            }}
+                                        >
+                                            <ClearIcon sx={{ fontSize: 16 }} />
+                                        </Box>
+                                    )}
                                 </Box>
                             ))
                         )}
