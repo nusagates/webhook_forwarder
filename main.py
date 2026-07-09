@@ -132,35 +132,18 @@ async def receive_webhook(project_id: str, slug: str, request: Request, backgrou
     return {"status": "success", "message": "Webhook received and queued for forwarding"}
 
 # --- MailerSend Reset Email Helper ---
-def get_mailersend_domain(token: str) -> str:
-    import urllib.request
-    import urllib.error
-    import json
-    try:
-        req = urllib.request.Request(
-            "https://api.mailersend.com/v1/domains",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-        )
-        with urllib.request.urlopen(req, timeout=5) as response:
-            res = json.loads(response.read().decode())
-            if res.get("data") and len(res["data"]) > 0:
-                return res["data"][0].get("name", "trial-z86g7gl5exogewea.mlsender.net")
-    except Exception as e:
-        print(f"Error fetching MailerSend domain: {e}")
-    return "trial-z86g7gl5exogewea.mlsender.net"
-
 def send_reset_email(email: str, token: str, reset_link: str):
     import urllib.request
     import urllib.error
     import json
-    api_token = "mlsn.c1022fff173ad451b4c37be06fcd10744891f32371b4ef94a4deab3942f2c56d"
-    domain = get_mailersend_domain(api_token)
-    sender = f"noreply@{domain}"
+    import os
     
+    api_token = "mlsn.c1022fff173ad451b4c37be06fcd10744891f32371b4ef94a4deab3942f2c56d"
+    sender = os.getenv("MAILERSEND_SENDER_EMAIL")
+    if not sender:
+        print("Error: MAILERSEND_SENDER_EMAIL environment variable is not set.")
+        return False
+        
     payload = {
         "from": {"email": sender, "name": "Webhook Forwarder"},
         "to": [{"email": email}],
