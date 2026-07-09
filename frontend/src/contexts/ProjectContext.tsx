@@ -32,6 +32,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     const refreshProjects = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setLoading(false);
+            return;
+        }
         try {
             const data = await fetchApi('/api/projects');
             setProjects(data);
