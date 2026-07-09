@@ -52,7 +52,8 @@ export default function LiveLogs() {
             })
             .catch(() => toast.error('Failed to load history logs'));
 
-        const wsUrl = `ws://127.0.0.1:8000/api/ws/logs/${selectedEndpointId}`;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/logs/${selectedEndpointId}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
