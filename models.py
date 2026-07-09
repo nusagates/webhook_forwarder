@@ -27,6 +27,7 @@ class Project(Base):
     name = Column(String(255), index=True)
     description = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    is_suspended = Column(Boolean, default=False)
     
     owner = relationship("User", back_populates="projects")
     endpoints = relationship("Endpoint", back_populates="project", cascade="all, delete-orphan")

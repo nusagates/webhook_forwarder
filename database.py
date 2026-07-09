@@ -33,6 +33,11 @@ try:
             conn.commit()
         except:
             pass
+        try:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN is_suspended BOOLEAN DEFAULT 0"))
+            conn.commit()
+        except:
+            pass
 except:
     pass
 

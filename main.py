@@ -32,6 +32,10 @@ app.add_middleware(
 @app.get("/webhook/{project_id}/{slug}")
 @app.get("/webhook/{project_id}/{slug}/")
 async def receive_webhook(project_id: str, slug: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if project and project.is_suspended:
+        raise HTTPException(status_code=403, detail="Project is suspended")
+        
     endpoint = db.query(models.Endpoint).filter(models.Endpoint.slug == slug, models.Endpoint.project_id == project_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
@@ -980,16 +984,12 @@ def get_all_projects_admin(
         for ep in endpoints:
             destinations = db.query(models.Destination).filter(models.Destination.endpoint_id == ep.id).all()
             log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == ep.id).count()
-            recent_logs = db.query(models.DeliveryLog).filter(
-                models.DeliveryLog.endpoint_id == ep.id
-            ).order_by(models.DeliveryLog.created_at.desc()).limit(5).all()
             endpoints_data.append({
                 "id": ep.id,
                 "name": ep.name,
                 "slug": ep.slug,
                 "destinations": [{"id": d.id, "url": d.url, "is_active": d.is_active, "auth_type": d.auth_type} for d in destinations],
-                "log_count": log_count,
-                "recent_logs": [{"id": l.id, "status_code": l.status_code, "created_at": str(l.created_at), "client_ip": l.client_ip} for l in recent_logs]
+                "log_count": log_count
             })
         result.append({
             "id": p.id,
@@ -997,9 +997,52 @@ def get_all_projects_admin(
             "description": p.description,
             "owner_email": owner.email if owner else "unknown",
             "owner_id": p.user_id,
+            "is_suspended": getattr(p, "is_suspended", False),
             "endpoints": endpoints_data
         })
     return {"total": total, "page": page, "limit": limit, "items": result}
+
+@app.get("/api/admin/endpoints/{endpoint_id}/logs")
+def get_endpoint_logs_admin(
+    endpoint_id: int,
+    limit: int = 5,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    check_super_admin(current_user)
+    recent_logs = db.query(models.DeliveryLog).filter(
+        models.DeliveryLog.endpoint_id == endpoint_id
+    ).order_by(models.DeliveryLog.created_at.desc()).limit(limit).all()
+    return [{"id": l.id, "status_code": l.status_code, "created_at": str(l.created_at), "client_ip": l.client_ip} for l in recent_logs]
+
+@app.post("/api/admin/projects/{project_id}/suspend")
+def suspend_project_admin(
+    project_id: str,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    check_super_admin(current_user)
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.is_suspended = True
+    db.commit()
+    return {"status": "success", "message": "Project has been suspended"}
+
+@app.post("/api/admin/projects/{project_id}/unsuspend")
+def unsuspend_project_admin(
+    project_id: str,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    check_super_admin(current_user)
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.is_suspended = False
+    db.commit()
+    return {"status": "success", "message": "Project has been unsuspended"}
+
 
 @app.get("/api/admin/users", response_model=List[schemas.UserOutAdmin])
 def get_all_users(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
