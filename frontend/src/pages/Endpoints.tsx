@@ -128,6 +128,18 @@ export default function Endpoints() {
 
     const handleAddDestination = async (e: React.FormEvent | React.MouseEvent, epId: number) => {
         e.preventDefault();
+        
+        // Basic URL validation
+        try {
+            const parsedUrl = new URL(newDestUrl);
+            if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+                throw new Error("Must be http or https");
+            }
+        } catch (err) {
+            toast.error('Invalid URL format. Must start with http:// or https://');
+            return;
+        }
+        
         try {
             await fetchApi(`/api/endpoints/${epId}/destinations`, {
                 method: 'POST',

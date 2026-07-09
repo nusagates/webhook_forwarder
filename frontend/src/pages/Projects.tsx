@@ -26,6 +26,7 @@ export default function Projects() {
 
     useEffect(() => {
         document.title = "Projects - Webhook Forwarder";
+        console.log("Cache bust");
         loadProjects();
     }, []);
 

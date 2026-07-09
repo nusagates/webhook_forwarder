@@ -354,6 +354,39 @@ def delete_log(log_id: int, current_user: models.User = Depends(auth.get_current
     db.commit()
     return {"status": "success"}
 
+@app.post("/api/logs/{log_id}/resend")
+async def resend_log(log_id: int, background_tasks: BackgroundTasks, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    log = db.query(models.DeliveryLog).filter(models.DeliveryLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+        
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == log.endpoint_id).first()
+    if not endpoint:
+        raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to resend webhooks in this project")
+        
+    # Get active destinations for this endpoint
+    destinations = db.query(models.Destination).filter(models.Destination.endpoint_id == endpoint.id, models.Destination.is_active == True).all()
+    
+    if not destinations:
+        raise HTTPException(status_code=400, detail="No active destinations to resend to")
+
+    req_meta = {
+        "http_method": log.http_method,
+        "client_ip": log.client_ip,
+        "headers": log.headers,
+        "query_params": log.query_params,
+        "is_resend": True
+    }
+    
+    from forwarder import forward_webhook
+    background_tasks.add_task(forward_webhook, endpoint.id, log.payload, destinations, req_meta)
+    
+    return {"status": "success", "message": "Resend triggered"}
+
 from ws_manager import manager
 
 @app.websocket("/api/ws/logs/{endpoint_id}")

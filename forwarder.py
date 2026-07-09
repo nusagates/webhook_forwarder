@@ -24,11 +24,34 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
         
         if active_destinations:
             responses = []
+            
+            # Extract method and headers, remove problematic headers
+            method = req_meta.get("http_method", "POST").upper()
+            
+            # Default to POST if GET is received (since we want to forward the payload)
+            if method == "GET":
+                method = "POST"
+                
+            headers = {}
+            try:
+                original_headers = json.loads(req_meta.get("headers", "{}"))
+                for k, v in original_headers.items():
+                    # Skip hop-by-hop headers and host
+                    if k.lower() not in ['host', 'content-length', 'connection', 'keep-alive', 'transfer-encoding', 'upgrade']:
+                        headers[k] = v
+            except:
+                pass
+                
             async with httpx.AsyncClient(timeout=10.0) as client:
                 for dest in active_destinations:
                     try:
-                        # Forward the payload
-                        res = await client.post(dest.url, content=payload.encode('utf-8') if isinstance(payload, str) else payload)
+                        # Forward the payload with original headers and method
+                        res = await client.request(
+                            method, 
+                            dest.url, 
+                            content=payload.encode('utf-8') if isinstance(payload, str) else payload,
+                            headers=headers
+                        )
                         responses.append(f"[{dest.url}] HTTP {res.status_code}: {res.text[:200]}")
                         log_dict["status_code"] = res.status_code # Store the last status code (or could compute average/min/max)
                     except Exception as e:

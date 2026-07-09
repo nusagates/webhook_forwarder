@@ -5,6 +5,7 @@ import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Check
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClearIcon from '@mui/icons-material/Clear';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 interface DeliveryLog { 
     id: number;
@@ -84,6 +85,15 @@ export default function LiveLogs() {
             if (selectedLogId === id) setSelectedLogId(null);
         } catch (err: any) {
             toast.error(err.message || 'Failed to delete log');
+        }
+    };
+
+    const handleResendLog = async (id: number) => {
+        try {
+            await fetchApi(`/api/logs/${id}/resend`, { method: 'POST' });
+            toast.success('Webhook resend triggered!');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to resend webhook');
         }
     };
 
@@ -246,10 +256,20 @@ export default function LiveLogs() {
                         {selectedLog ? (
                             <Box>
                                 {/* Request Details Header */}
-                                <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center' }}>
+                                <Box sx={{ bgcolor: '#f5f5f5', p: 1.5, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                                         Request Details & Headers
                                     </Typography>
+                                    {!isViewer && (
+                                        <Button 
+                                            variant="outlined" 
+                                            size="small" 
+                                            startIcon={<ReplayIcon />}
+                                            onClick={() => handleResendLog(selectedLog.id)}
+                                        >
+                                            Resend Webhook
+                                        </Button>
+                                    )}
                                 </Box>
                                 
                                 <Box sx={{ p: 3 }}>
