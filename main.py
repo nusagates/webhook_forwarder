@@ -312,6 +312,29 @@ def create_destination(endpoint_id: int, destination: schemas.DestinationCreate,
     db.refresh(new_dest)
     return new_dest
 
+@app.put("/api/endpoints/{endpoint_id}/destinations/{destination_id}", response_model=schemas.Destination)
+def update_destination(endpoint_id: int, destination_id: int, destination_update: schemas.DestinationCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
+    if not endpoint:
+        raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to edit destinations in this project")
+        
+    destination = db.query(models.Destination).filter(models.Destination.id == destination_id, models.Destination.endpoint_id == endpoint_id).first()
+    if not destination:
+        raise HTTPException(status_code=404, detail="Destination not found")
+        
+    destination.url = destination_update.url
+    destination.is_active = destination_update.is_active
+    destination.auth_type = destination_update.auth_type
+    destination.auth_config = destination_update.auth_config
+    
+    db.commit()
+    db.refresh(destination)
+    return destination
+
 class TestDestinationRequest(BaseModel):
     url: str
     auth_type: str = "none"
@@ -346,6 +369,26 @@ async def test_destination(request: TestDestinationRequest, current_user: models
         header_value = auth_config.get("header_value", "")
         if header_name:
             headers[header_name] = header_value
+    elif auth_type == "query_param":
+        param_name = auth_config.get("param_name", "")
+        param_value = auth_config.get("param_value", "")
+        if param_name:
+            separator = "&" if "?" in request.url else "?"
+            request.url = f"{request.url}{separator}{param_name}={param_value}"
+    elif auth_type == "hmac":
+        import hmac
+        import hashlib
+        header_name = auth_config.get("header_name", "X-Hub-Signature-256")
+        secret = auth_config.get("secret", "")
+        algorithm = auth_config.get("algorithm", "sha256")
+        
+        content_bytes = b"{}" # dummy payload for testing
+        if algorithm == "sha256":
+            signature = hmac.new(secret.encode(), content_bytes, hashlib.sha256).hexdigest()
+            headers[header_name] = f"sha256={signature}"
+        elif algorithm == "sha1":
+            signature = hmac.new(secret.encode(), content_bytes, hashlib.sha1).hexdigest()
+            headers[header_name] = f"sha1={signature}"
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:

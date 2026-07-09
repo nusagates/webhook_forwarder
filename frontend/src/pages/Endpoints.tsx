@@ -7,7 +7,7 @@ import SendIcon from '@mui/icons-material/Send';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
 
-interface Destination { id: number; url: string; is_active: boolean; }
+interface Destination { id: number; url: string; is_active: boolean; auth_type?: string; auth_config?: string; endpoint_id?: number; }
 interface Endpoint { 
     id: number; name: string; slug: string; project_id: string; 
     auth_type: string; 
@@ -33,6 +33,7 @@ export default function Endpoints() {
     const [newAuthConfig, setNewAuthConfig] = useState<{ [key: string]: string }>({});
 
     const [editEndpoint, setEditEndpoint] = useState<Endpoint | null>(null);
+    const [editDestination, setEditDestination] = useState<Destination | null>(null);
 
     useEffect(() => {
         document.title = "Endpoints - Webhook Forwarder";
@@ -107,6 +108,45 @@ export default function Endpoints() {
             loadEndpoints(selectedProjectId);
         } catch (err: any) {
             toast.error(err.message || 'Failed to update endpoint');
+        }
+    };
+
+
+    const handleUpdateDestination = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editDestination || !editDestination.endpoint_id) return;
+        try {
+            await fetchApi(`/api/endpoints/${editDestination.endpoint_id}/destinations/${editDestination.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    url: editDestination.url,
+                    is_active: editDestination.is_active,
+                    auth_type: editDestination.auth_type || 'none',
+                    auth_config: editDestination.auth_config || null
+                })
+            });
+            setEditDestination(null);
+            loadEndpoints(selectedProjectId);
+            toast.success('Destination updated!');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to update destination');
+        }
+    };
+
+    const handleTestExistingDestination = async (dest: Destination) => {
+        const tid = toast.loading('Testing connection...');
+        try {
+            const res = await fetchApi('/api/utils/test-destination', {
+                method: 'POST',
+                body: JSON.stringify({
+                    url: dest.url,
+                    auth_type: dest.auth_type || 'none',
+                    auth_config: dest.auth_config || null
+                })
+            });
+            toast.success(`Success! ${res.message}`, { id: tid });
+        } catch (err: any) {
+            toast.error(`Test failed: ${err.message}`, { id: tid });
         }
     };
 
@@ -316,15 +356,25 @@ export default function Endpoints() {
                                         {ep.destinations.map(dest => (
                                             <ListItem key={dest.id} disablePadding sx={{ mb: 1 }}>
                                                 <ListItemIcon sx={{ minWidth: 36 }}><SendIcon color="action" fontSize="small" /></ListItemIcon>
+
                                                 <ListItemText 
                                                     primary={dest.url} 
                                                     secondary={dest.is_active ? 'Active' : 'Inactive'} 
                                                 />
                                                 {!isViewer && (
-                                                    <Button size="small" color="error" onClick={() => handleDeleteDestination(ep.id, dest.id)}>
-                                                        <DeleteIcon fontSize="small" />
-                                                    </Button>
+                                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                                        <Button size="small" color="primary" onClick={() => handleTestExistingDestination(dest)}>
+                                                            Test
+                                                        </Button>
+                                                        <Button size="small" color="primary" onClick={() => setEditDestination({ ...dest, endpoint_id: ep.id })}>
+                                                            <EditIcon fontSize="small" />
+                                                        </Button>
+                                                        <Button size="small" color="error" onClick={() => handleDeleteDestination(ep.id, dest.id)}>
+                                                            <DeleteIcon fontSize="small" />
+                                                        </Button>
+                                                    </Box>
                                                 )}
+
                                             </ListItem>
                                         ))}
                                     </List>
@@ -356,10 +406,14 @@ export default function Endpoints() {
                                                     <FormControl size="small" sx={{ minWidth: 150 }}>
                                                         <InputLabel>Auth Type</InputLabel>
                                                         <Select value={newDestAuthType} label="Auth Type" onChange={e => setNewDestAuthType(e.target.value)}>
+
                                                             <MenuItem value="none">None</MenuItem>
                                                             <MenuItem value="basic">Basic Auth</MenuItem>
                                                             <MenuItem value="bearer">Bearer Token</MenuItem>
                                                             <MenuItem value="custom_header">Custom Header</MenuItem>
+                                                            <MenuItem value="query_param">API Key (Query Param)</MenuItem>
+                                                            <MenuItem value="hmac">HMAC Signature</MenuItem>
+
                                                         </Select>
                                                     </FormControl>
                                                     
@@ -372,12 +426,32 @@ export default function Endpoints() {
                                                     {newDestAuthType === 'bearer' && (
                                                         <TextField size="small" placeholder="Token" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, token: e.target.value})} />
                                                     )}
+
                                                     {newDestAuthType === 'custom_header' && (
                                                         <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
                                                             <TextField size="small" placeholder="Header Name (e.g., x-api-key)" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_name: e.target.value})} />
                                                             <TextField size="small" placeholder="Header Value" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_value: e.target.value})} />
                                                         </Box>
                                                     )}
+                                                    {newDestAuthType === 'query_param' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Param Name (e.g., apikey)" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, param_name: e.target.value})} />
+                                                            <TextField size="small" placeholder="Param Value" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, param_value: e.target.value})} />
+                                                        </Box>
+                                                    )}
+                                                    {newDestAuthType === 'hmac' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Header Name (default: X-Hub-Signature-256)" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_name: e.target.value})} />
+                                                            <TextField size="small" placeholder="Secret Key" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, secret: e.target.value})} />
+                                                            <FormControl size="small" sx={{ minWidth: 100 }}>
+                                                                <Select value={newDestAuthConfig.algorithm || 'sha256'} onChange={e => setNewDestAuthConfig({...newDestAuthConfig, algorithm: e.target.value as string})}>
+                                                                    <MenuItem value="sha256">SHA-256</MenuItem>
+                                                                    <MenuItem value="sha1">SHA-1</MenuItem>
+                                                                </Select>
+                                                            </FormControl>
+                                                        </Box>
+                                                    )}
+
                                                 </Box>
                                             )}
                                         </Box>
@@ -453,6 +527,88 @@ export default function Endpoints() {
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => setEditEndpoint(null)}>Cancel</Button>
+                            <Button type="submit" variant="contained">Save Changes</Button>
+                        </DialogActions>
+                    </Box>
+                </Dialog>
+            )}
+
+
+            {editDestination && (
+                <Dialog open={!!editDestination} onClose={() => setEditDestination(null)} maxWidth="sm" fullWidth>
+                    <DialogTitle>Edit Destination</DialogTitle>
+                    <Box component="form" onSubmit={handleUpdateDestination}>
+                        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <TextField size="small" label="URL" value={editDestination.url} onChange={e => setEditDestination({...editDestination, url: e.target.value})} required fullWidth />
+                            
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Authentication Type</InputLabel>
+                                <Select value={editDestination.auth_type || 'none'} label="Authentication Type" onChange={e => setEditDestination({...editDestination, auth_type: e.target.value, auth_config: undefined})}>
+                                    <MenuItem value="none">None</MenuItem>
+                                    <MenuItem value="basic">Basic Auth</MenuItem>
+                                    <MenuItem value="bearer">Bearer Token</MenuItem>
+                                    <MenuItem value="custom_header">Custom Header</MenuItem>
+                                    <MenuItem value="query_param">API Key (Query Param)</MenuItem>
+                                    <MenuItem value="hmac">HMAC Signature</MenuItem>
+                                </Select>
+                            </FormControl>
+
+                            {/* Render Auth Config fields based on auth_type */}
+                            {(() => {
+                                let config: any = {};
+                                try { config = JSON.parse(editDestination.auth_config || '{}'); } catch {}
+                                
+                                const updateConfig = (newCfg: any) => {
+                                    setEditDestination({...editDestination, auth_config: JSON.stringify({...config, ...newCfg})});
+                                };
+
+                                if (editDestination.auth_type === 'basic') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Username" value={config.username || ''} onChange={e => updateConfig({username: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Password" type="password" value={config.password || ''} onChange={e => updateConfig({password: e.target.value})} required fullWidth />
+                                        </Box>
+                                    );
+                                }
+                                if (editDestination.auth_type === 'bearer') {
+                                    return <TextField size="small" label="Bearer Token" value={config.token || ''} onChange={e => updateConfig({token: e.target.value})} required fullWidth />;
+                                }
+                                if (editDestination.auth_type === 'custom_header') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Header Name" value={config.header_name || ''} onChange={e => updateConfig({header_name: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Header Value" value={config.header_value || ''} onChange={e => updateConfig({header_value: e.target.value})} required fullWidth />
+                                        </Box>
+                                    );
+                                }
+                                if (editDestination.auth_type === 'query_param') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Param Name" value={config.param_name || ''} onChange={e => updateConfig({param_name: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Param Value" value={config.param_value || ''} onChange={e => updateConfig({param_value: e.target.value})} required fullWidth />
+                                        </Box>
+                                    );
+                                }
+                                if (editDestination.auth_type === 'hmac') {
+                                    return (
+                                        <Box sx={{ display: 'flex', gap: 2 }}>
+                                            <TextField size="small" label="Header Name (default: X-Hub-Signature-256)" value={config.header_name || ''} onChange={e => updateConfig({header_name: e.target.value})} required fullWidth />
+                                            <TextField size="small" label="Secret Key" value={config.secret || ''} onChange={e => updateConfig({secret: e.target.value})} required fullWidth />
+                                            <FormControl fullWidth size="small">
+                                                <InputLabel>Algorithm</InputLabel>
+                                                <Select value={config.algorithm || 'sha256'} label="Algorithm" onChange={e => updateConfig({algorithm: e.target.value})}>
+                                                    <MenuItem value="sha256">SHA-256</MenuItem>
+                                                    <MenuItem value="sha1">SHA-1</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        </Box>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setEditDestination(null)}>Cancel</Button>
                             <Button type="submit" variant="contained">Save Changes</Button>
                         </DialogActions>
                     </Box>

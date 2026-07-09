@@ -68,6 +68,27 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
                             header_value = auth_config.get("header_value", "")
                             if header_name:
                                 dest_headers[header_name] = header_value
+                        elif auth_type == "query_param":
+                            param_name = auth_config.get("param_name", "")
+                            param_value = auth_config.get("param_value", "")
+                            if param_name:
+                                separator = "&" if "?" in dest.url else "?"
+                                dest.url = f"{dest.url}{separator}{param_name}={param_value}"
+                        elif auth_type == "hmac":
+                            import hmac
+                            import hashlib
+                            header_name = auth_config.get("header_name", "X-Hub-Signature-256")
+                            secret = auth_config.get("secret", "")
+                            algorithm = auth_config.get("algorithm", "sha256")
+                            
+                            content_bytes = payload.encode('utf-8') if isinstance(payload, str) else payload
+                            
+                            if algorithm == "sha256":
+                                signature = hmac.new(secret.encode(), content_bytes, hashlib.sha256).hexdigest()
+                                dest_headers[header_name] = f"sha256={signature}"
+                            elif algorithm == "sha1":
+                                signature = hmac.new(secret.encode(), content_bytes, hashlib.sha1).hexdigest()
+                                dest_headers[header_name] = f"sha1={signature}"
 
                         # Forward the payload with original headers and method
                         res = await client.request(
