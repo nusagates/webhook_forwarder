@@ -144,7 +144,7 @@ class UserOutAdmin(BaseModel):
     limit_logs: Optional[int]
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserAdminUpdate(BaseModel):
     is_admin: bool
