@@ -38,6 +38,23 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
             const data = await fetchApi('/api/settings/db');
             setCurrentUrl(data.url);
             setCurrentEngine(data.engine);
+            
+            if (data.raw_url && data.engine !== 'sqlite') {
+                setEngine(data.engine);
+                try {
+                    const parseUrl = data.raw_url.replace('+pymysql', '');
+                    const urlObj = new URL(parseUrl);
+                    setHost(urlObj.hostname);
+                    setPort(urlObj.port || '');
+                    setUser(decodeURIComponent(urlObj.username));
+                    setPassword(decodeURIComponent(urlObj.password));
+                    setDbName(urlObj.pathname.substring(1));
+                } catch (err) {
+                    console.error("Failed to parse raw_url", err);
+                }
+            } else {
+                setEngine('sqlite');
+            }
         } catch (e: any) {
             toast.error(e.message || "Failed to load database settings");
         }
