@@ -769,11 +769,22 @@ def migrate_database(config: DbConfig, current_user: User = Depends(auth.get_cur
             models.DeliveryLog
         ]
         
+        # 3. Clear target database to avoid IntegrityError (Duplicate primary keys)
+        for table in reversed(tables):
+            try:
+                new_db.execute(table.__table__.delete())
+            except Exception:
+                pass
+        new_db.commit()
+        
         for table in tables:
             records = db.query(table).all()
             for record in records:
-                # Use merge to gracefully handle existing records (updates them instead of duplicate PK error)
-                new_db.merge(record)
+                # Expunge from old session and add to new session
+                db.expunge(record)
+                from sqlalchemy.orm import make_transient
+                make_transient(record)
+                new_db.add(record)
             
             try:
                 new_db.commit()
