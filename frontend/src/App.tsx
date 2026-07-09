@@ -10,6 +10,7 @@ import Layout from './components/Layout';
 import Projects from './pages/Projects';
 import Endpoints from './pages/Endpoints';
 import LiveLogs from './pages/LiveLogs';
+import Profile from './pages/Profile';
 
 const theme = createTheme({
   palette: {
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="projects" element={<Projects />} />
               <Route path="endpoints" element={<Endpoints />} />
               <Route path="logs" element={<LiveLogs />} />
+              <Route path="profile" element={<Profile />} />
           </Route>
         </Routes>
       </BrowserRouter>

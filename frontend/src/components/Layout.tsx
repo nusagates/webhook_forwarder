@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { fetchApi } from '../api';
-import toast from 'react-hot-toast';
 import { styled, useTheme } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
@@ -13,7 +11,6 @@ import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, TextField } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ListItem from '@mui/material/ListItem';
@@ -24,7 +21,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import LogoutIcon from '@mui/icons-material/Logout';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const drawerWidth = 240;
 
@@ -111,40 +108,11 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleDeleteOpen = () => setDeleteOpen(true);
-  const handleDeleteClose = () => {
-    setDeleteOpen(false);
-    setDeletePassword('');
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletePassword) {
-      toast.error('Password is required');
-      return;
-    }
-    setIsDeleting(true);
-    try {
-      await fetchApi('/api/auth/me', {
-        method: 'DELETE',
-        body: JSON.stringify({ password: deletePassword })
-      });
-      toast.success('Account deleted successfully');
-      localStorage.removeItem('token');
-      navigate('/login');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete account');
-      setIsDeleting(false);
-    }
-  };
-
   const menuItems = [
     { text: 'Projects', icon: <DashboardIcon />, path: '/projects' },
     { text: 'Endpoints', icon: <ListAltIcon />, path: '/endpoints' },
     { text: 'Live Logs', icon: <TimelineIcon />, path: '/logs' },
+    { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile' },
   ];
 
   return (
@@ -219,50 +187,12 @@ export default function Layout() {
               <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0, color: '#d32f2f' }} />
             </ListItemButton>
           </ListItem>
-          <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}
-              onClick={handleDeleteOpen}
-            >
-              <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center', color: '#d32f2f' }}>
-                <DeleteForeverIcon />
-              </ListItemIcon>
-              <ListItemText primary="Delete Account" sx={{ opacity: open ? 1 : 0, color: '#d32f2f' }} />
-            </ListItemButton>
-          </ListItem>
         </List>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
         <DrawerHeader />
         <Outlet />
       </Box>
-
-      <Dialog open={deleteOpen} onClose={handleDeleteClose}>
-        <DialogTitle sx={{ color: 'error.main' }}>Delete Account</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Are you sure you want to delete your account? This action is <b>irreversible</b>. 
-            All your projects, endpoints, and delivery logs will be permanently deleted.
-            Please enter your password to confirm.
-          </DialogContentText>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Password"
-            type="password"
-            fullWidth
-            variant="outlined"
-            value={deletePassword}
-            onChange={(e) => setDeletePassword(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteClose} disabled={isDeleting}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={isDeleting}>
-            {isDeleting ? 'Deleting...' : 'Delete Account'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 }
