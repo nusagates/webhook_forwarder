@@ -7,13 +7,13 @@ from database import Base
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    full_name = Column(String, nullable=True)
-    hashed_password = Column(String)
+    email = Column(String(255), unique=True, index=True)
+    full_name = Column(String(255), nullable=True)
+    hashed_password = Column(String(255))
     
     is_admin = Column(Boolean, default=False)
     is_blocked = Column(Boolean, default=False)
-    block_reason = Column(String, nullable=True)
+    block_reason = Column(String(255), nullable=True)
     limit_projects = Column(Integer, nullable=True)
     limit_endpoints = Column(Integer, nullable=True)
     limit_logs = Column(Integer, nullable=True)
@@ -22,9 +22,9 @@ class User(Base):
 
 class Project(Base):
     __tablename__ = "projects"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    name = Column(String, index=True)
-    description = Column(String, nullable=True)
+    id = Column(String(255), primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    name = Column(String(255), index=True)
+    description = Column(String(255), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     
     owner = relationship("User", back_populates="projects")
@@ -34,9 +34,9 @@ class Project(Base):
 class ProjectMember(Base):
     __tablename__ = "project_members"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(String, ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    project_id = Column(String(255), ForeignKey("projects.id", ondelete="CASCADE"), index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    role = Column(String) # 'viewer', 'editor'
+    role = Column(String(255)) # 'viewer', 'editor'
     
     project = relationship("Project", back_populates="members")
     user = relationship("User")
@@ -45,14 +45,14 @@ class Endpoint(Base):
     __tablename__ = "endpoints"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    slug = Column(String, index=True)
-    project_id = Column(String, ForeignKey("projects.id"))
+    name = Column(String(255), index=True)
+    slug = Column(String(255), index=True)
+    project_id = Column(String(255), ForeignKey("projects.id"))
     
     is_active = Column(Boolean, default=True)
     
-    auth_type = Column(String, default="none")
-    auth_config = Column(String, nullable=True) # JSON string
+    auth_type = Column(String(255), default="none")
+    auth_config = Column(String(255), nullable=True) # JSON string
     
     project = relationship("Project", back_populates="endpoints")
     destinations = relationship("Destination", back_populates="endpoint", cascade="all, delete-orphan")
@@ -63,10 +63,10 @@ class Destination(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     endpoint_id = Column(Integer, ForeignKey("endpoints.id"))
-    url = Column(String)
+    url = Column(String(255))
     is_active = Column(Boolean, default=True)
-    auth_type = Column(String, default="none")
-    auth_config = Column(String, nullable=True) # JSON string
+    auth_type = Column(String(255), default="none")
+    auth_config = Column(String(255), nullable=True) # JSON string
 
     endpoint = relationship("Endpoint", back_populates="destinations")
     logs = relationship("DeliveryLog", back_populates="destination", cascade="all, delete-orphan")
@@ -79,8 +79,8 @@ class DeliveryLog(Base):
     destination_id = Column(Integer, ForeignKey("destinations.id"), nullable=True)
     
     # Incoming Request Data
-    http_method = Column(String, default="POST")
-    client_ip = Column(String, nullable=True)
+    http_method = Column(String(255), default="POST")
+    client_ip = Column(String(255), nullable=True)
     headers = Column(Text, nullable=True)
     query_params = Column(Text, nullable=True)
     payload = Column(Text)
@@ -99,5 +99,5 @@ class DeliveryLog(Base):
 class SystemSetting(Base):
     __tablename__ = "system_settings"
 
-    key = Column(String, primary_key=True, index=True)
-    value = Column(String)
+    key = Column(String(255), primary_key=True, index=True)
+    value = Column(String(255))
