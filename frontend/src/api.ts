@@ -22,6 +22,14 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
     
+    if (response.status === 401) {
+        localStorage.removeItem('token');
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
+        throw new Error('Session expired or unauthorized');
+    }
+    
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         let errorMessage = 'An error occurred';
