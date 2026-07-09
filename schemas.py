@@ -16,7 +16,7 @@ class UserDeleteRequest(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     current_password: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     new_password: Optional[str] = None
 

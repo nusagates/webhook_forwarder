@@ -160,14 +160,15 @@ def update_user(request: schemas.UserUpdateRequest, current_user: models.User = 
             detail="Incorrect password",
         )
     
-    # Check if email is being changed and if it already exists
-    if request.email != current_user.email:
+    # Check if email is being changed
+    if request.email and request.email != current_user.email:
         existing_user = db.query(models.User).filter(models.User.email == request.email).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
         current_user.email = request.email
         
-    current_user.full_name = request.full_name
+    if request.full_name is not None:
+        current_user.full_name = request.full_name
     
     if request.new_password:
         current_user.hashed_password = auth.get_password_hash(request.new_password)
