@@ -24,7 +24,10 @@ export default function Projects() {
     const [shareProjectId, setShareProjectId] = useState<string | null>(null);
     const [shareProjectRole, setShareProjectRole] = useState('');
 
-    useEffect(() => { loadProjects(); }, []);
+    useEffect(() => {
+        document.title = "Projects - Webhook Forwarder";
+        loadProjects();
+    }, []);
 
     const loadProjects = async () => {
         try {
