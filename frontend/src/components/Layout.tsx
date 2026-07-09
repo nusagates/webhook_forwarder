@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { styled, useTheme } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
@@ -20,9 +20,7 @@ import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import TimelineIcon from '@mui/icons-material/Timeline';
-
-
-
+import Tooltip from '@mui/material/Tooltip';
 import SettingsIcon from '@mui/icons-material/Settings';
 import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
@@ -36,8 +34,6 @@ import GroupIcon from '@mui/icons-material/Group';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { useProject } from '../contexts/ProjectContext';
 import { fetchApi } from '../api';
-import { useEffect } from 'react';
-
 
 const drawerWidth = 240;
 
@@ -47,7 +43,7 @@ const openedMixin = (theme: Theme) => ({
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.enteringScreen,
   }),
-  overflowX: 'hidden',
+  overflowX: 'hidden' as const,
 });
 
 const closedMixin = (theme: Theme) => ({
@@ -55,7 +51,7 @@ const closedMixin = (theme: Theme) => ({
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  overflowX: 'hidden',
+  overflowX: 'hidden' as const,
   width: `calc(${theme.spacing(7)} + 1px)`,
   [theme.breakpoints.up('sm')]: {
     width: `calc(${theme.spacing(8)} + 1px)`,
@@ -67,7 +63,6 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'flex-end',
   padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
   ...theme.mixins.toolbar,
 }));
 
@@ -113,12 +108,13 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 export default function Layout() {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
-
   const [user, setUser] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [projectAnchorEl, setProjectAnchorEl] = useState<null | HTMLElement>(null);
+  // Separate anchor for icon-mode settings popover
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
   const { projects, selectedProjectId, setSelectedProjectId } = useProject();
 
   useEffect(() => {
@@ -140,8 +136,9 @@ export default function Layout() {
     { text: 'Projects', icon: <DashboardIcon />, path: '/projects' },
     { text: 'Endpoints', icon: <ListAltIcon />, path: '/endpoints' },
     { text: 'Live Logs', icon: <TimelineIcon />, path: '/logs' },
-    
   ];
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -152,25 +149,22 @@ export default function Layout() {
             aria-label="open drawer"
             onClick={handleDrawerOpen}
             edge="start"
-            sx={{
-              marginRight: 5,
-              ...(open && { display: 'none' }),
-            }}
+            sx={{ marginRight: 5, ...(open && { display: 'none' }) }}
           >
             <MenuIcon />
           </IconButton>
-
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, color: theme.palette.primary.main, flexGrow: 1 }}>
             Webhook Forwarder
           </Typography>
           {user && (
             <>
               <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0, ml: 2 }}>
-                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{user.full_name ? user.full_name[0].toUpperCase() : user.email[0].toUpperCase()}</Avatar>
+                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                  {user.full_name ? user.full_name[0].toUpperCase() : user.email[0].toUpperCase()}
+                </Avatar>
               </IconButton>
               <Menu
                 sx={{ mt: '45px' }}
-                id="menu-appbar"
                 anchorEl={anchorEl}
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                 keepMounted
@@ -187,9 +181,9 @@ export default function Layout() {
               </Menu>
             </>
           )}
-
         </Toolbar>
       </AppBar>
+
       <Drawer variant="permanent" open={open}>
         <DrawerHeader>
           <IconButton onClick={handleDrawerClose}>
@@ -197,135 +191,179 @@ export default function Layout() {
           </IconButton>
         </DrawerHeader>
         <Divider />
+
+        {/* Main nav items */}
         <List>
           {menuItems.map((item) => (
             <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
-              <ListItemButton
-                sx={{
-                  minHeight: 48,
-                  justifyContent: open ? 'initial' : 'center',
-                  px: 2.5,
-                  ...(location.pathname.startsWith(item.path) && {
+              <Tooltip title={!open ? item.text : ''} placement="right" arrow>
+                <ListItemButton
+                  sx={{
+                    minHeight: 48,
+                    justifyContent: open ? 'initial' : 'center',
+                    px: 2.5,
+                    ...(location.pathname.startsWith(item.path) && {
                       backgroundColor: 'rgba(26, 115, 232, 0.08)',
                       borderRight: `3px solid ${theme.palette.primary.main}`,
-                  })
-                }}
-                onClick={() => navigate(item.path)}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    mr: open ? 3 : 'auto',
-                    justifyContent: 'center',
-                    color: location.pathname.startsWith(item.path) ? theme.palette.primary.main : 'inherit',
+                    })
                   }}
+                  onClick={() => navigate(item.path)}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
-              </ListItemButton>
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: open ? 3 : 'auto',
+                      justifyContent: 'center',
+                      color: location.pathname.startsWith(item.path) ? theme.palette.primary.main : 'inherit',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
+                </ListItemButton>
+              </Tooltip>
             </ListItem>
           ))}
         </List>
+
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
-                <List sx={{ mt: 'auto', mb: 2 }}>
+
+        {/* Bottom: Project switcher + Settings */}
+        <List sx={{ mt: 'auto', mb: 2 }}>
+
           {/* Project Switcher */}
           {projects.length > 0 && (
-            <ListItem sx={{ display: 'block', px: 2, mb: 2 }}>
-                <ListItemButton 
-                    onClick={(e) => setProjectAnchorEl(e.currentTarget)}
-                    sx={{ 
-                        borderRadius: 1, 
-                        border: open ? '1px solid #e0e0e0' : 'none',
-                        justifyContent: open ? 'space-between' : 'center',
-                        px: open ? 2 : 1,
-                        py: 1
-                    }}
+            <ListItem sx={{ display: 'block', px: open ? 2 : 0.5, mb: 1 }}>
+              <Tooltip
+                title={!open ? `Active: ${selectedProject?.name || 'No project selected'}` : ''}
+                placement="right"
+                arrow
+              >
+                <ListItemButton
+                  onClick={(e) => setProjectAnchorEl(e.currentTarget)}
+                  sx={{
+                    borderRadius: 1,
+                    border: open ? '1px solid #e0e0e0' : 'none',
+                    justifyContent: open ? 'space-between' : 'center',
+                    px: open ? 2 : 1,
+                    py: 1,
+                  }}
                 >
-                    {open ? (
-                        <>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>Active Project</Typography>
-                                <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
-                                    {projects.find(p => p.id === selectedProjectId)?.name || 'Select Project'}
-                                </Typography>
-                            </Box>
-                            <ExpandMore color="action" />
-                        </>
-                    ) : (
-                        <StorageIcon color="action" />
-                    )}
+                  {open ? (
+                    <>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>Active Project</Typography>
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                          {selectedProject?.name || 'Select Project'}
+                        </Typography>
+                      </Box>
+                      <ExpandMore color="action" />
+                    </>
+                  ) : (
+                    <StorageIcon color={selectedProject ? 'primary' : 'action'} />
+                  )}
                 </ListItemButton>
-                
-                <Menu
-                    anchorEl={projectAnchorEl}
-                    open={Boolean(projectAnchorEl)}
-                    onClose={() => setProjectAnchorEl(null)}
-                    sx={{ '& .MuiPaper-root': { width: 220, maxHeight: 300 } }}
-                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                    {projects.map((p) => (
-                        <MenuItem 
-                            key={p.id} 
-                            selected={p.id === selectedProjectId}
-                            onClick={() => {
-                                setSelectedProjectId(p.id);
-                                setProjectAnchorEl(null);
-                            }}
-                        >
-                            <Typography noWrap>{p.name}</Typography>
-                        </MenuItem>
-                    ))}
-                </Menu>
+              </Tooltip>
+
+              {/* Project dropdown menu — works in both icon and expanded mode */}
+              <Menu
+                anchorEl={projectAnchorEl}
+                open={Boolean(projectAnchorEl)}
+                onClose={() => setProjectAnchorEl(null)}
+                sx={{ '& .MuiPaper-root': { width: 220, maxHeight: 300 } }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              >
+                {projects.map((p) => (
+                  <MenuItem
+                    key={p.id}
+                    selected={p.id === selectedProjectId}
+                    onClick={() => { setSelectedProjectId(p.id); setProjectAnchorEl(null); }}
+                  >
+                    <Typography noWrap>{p.name}</Typography>
+                  </MenuItem>
+                ))}
+              </Menu>
             </ListItem>
           )}
+
           <Divider sx={{ mb: 1 }} />
+
+          {/* Settings — Admin only */}
           {user && user.id === 1 && (
             <>
               <ListItem disablePadding sx={{ display: 'block' }}>
-                <ListItemButton onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}>
-                  <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center' }}>
-                    <SettingsIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
-                  {open ? (settingsMenuOpen ? <ExpandLess /> : <ExpandMore />) : null}
-                </ListItemButton>
+                <Tooltip title={!open ? 'Settings' : ''} placement="right" arrow>
+                  <ListItemButton
+                    onClick={(e) => {
+                      if (open) {
+                        setSettingsMenuOpen(!settingsMenuOpen);
+                      } else {
+                        setSettingsAnchorEl(e.currentTarget);
+                      }
+                    }}
+                    sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center' }}>
+                      <SettingsIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
+                    {open ? (settingsMenuOpen ? <ExpandLess /> : <ExpandMore />) : null}
+                  </ListItemButton>
+                </Tooltip>
               </ListItem>
+
+              {/* Expanded sidebar: collapsible sub-menu */}
               <Collapse in={settingsMenuOpen && open} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
-                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} onClick={() => setSettingsOpen(true)}>
-                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
-                      <StorageIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Database" sx={{ opacity: open ? 1 : 0 }} />
+                  <ListItemButton sx={{ pl: 4 }} onClick={() => setSettingsOpen(true)}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><StorageIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText primary="Database" />
                   </ListItemButton>
-                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} selected={location.pathname === '/settings/limits'} onClick={() => navigate('/settings/limits')}>
-                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
-                      <SpeedIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Limits" sx={{ opacity: open ? 1 : 0 }} />
+                  <ListItemButton sx={{ pl: 4 }} selected={location.pathname === '/settings/limits'} onClick={() => navigate('/settings/limits')}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><SpeedIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText primary="Limits" />
                   </ListItemButton>
-                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} selected={location.pathname === '/settings/users'} onClick={() => navigate('/settings/users')}>
-                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
-                      <GroupIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Users" sx={{ opacity: open ? 1 : 0 }} />
+                  <ListItemButton sx={{ pl: 4 }} selected={location.pathname === '/settings/users'} onClick={() => navigate('/settings/users')}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><GroupIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText primary="Users" />
                   </ListItemButton>
                 </List>
               </Collapse>
+
+              {/* Icon-only sidebar: floating popover menu */}
+              <Menu
+                anchorEl={settingsAnchorEl}
+                open={Boolean(settingsAnchorEl)}
+                onClose={() => setSettingsAnchorEl(null)}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              >
+                <MenuItem onClick={() => { setSettingsAnchorEl(null); setSettingsOpen(true); }}>
+                  <ListItemIcon><StorageIcon fontSize="small" /></ListItemIcon>
+                  Database
+                </MenuItem>
+                <MenuItem onClick={() => { setSettingsAnchorEl(null); navigate('/settings/limits'); }}>
+                  <ListItemIcon><SpeedIcon fontSize="small" /></ListItemIcon>
+                  Limits
+                </MenuItem>
+                <MenuItem onClick={() => { setSettingsAnchorEl(null); navigate('/settings/users'); }}>
+                  <ListItemIcon><GroupIcon fontSize="small" /></ListItemIcon>
+                  Users
+                </MenuItem>
+              </Menu>
             </>
           )}
         </List>
       </Drawer>
+
       <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
         <DrawerHeader />
         <Outlet />
-
       </Box>
+
       <DatabaseSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   );
 }
-
