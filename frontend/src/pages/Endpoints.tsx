@@ -20,7 +20,7 @@ interface Endpoint {
 export default function Endpoints() {
     const confirm = useConfirm();
 
-    const { projects, selectedProjectId, setSelectedProjectId } = useProject();
+    const { projects, selectedProjectId } = useProject();
     const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
     
     const [newEpName, setNewEpName] = useState('');
@@ -232,18 +232,7 @@ export default function Endpoints() {
             </Typography>
 
             <Paper sx={{ p: 3, mb: 4 }} elevation={1}>
-                <FormControl fullWidth size="small">
-                    <InputLabel id="project-select-label">Select Project Context</InputLabel>
-                    <Select
-                        labelId="project-select-label"
-                        value={selectedProjectId}
-                        label="Select Project Context"
-                        onChange={e => setSelectedProjectId(e.target.value)}
-                    >
-                        <MenuItem value=""><em>-- Choose Project --</em></MenuItem>
-                        {projects.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
-                    </Select>
-                </FormControl>
+                
             </Paper>
 
             {selectedProjectId && !isViewer && (

@@ -24,7 +24,7 @@ interface DeliveryLog {
 interface Endpoint { id: number; name: string; slug: string; project_id: string; }
 
 export default function LiveLogs() {
-    const { projects, selectedProjectId, setSelectedProjectId } = useProject();
+    const { projects, selectedProjectId } = useProject();
     const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
     const [selectedEndpointId, setSelectedEndpointId] = useState<string>('');
     const [logs, setLogs] = useState<DeliveryLog[]>([]);
@@ -205,18 +205,7 @@ export default function LiveLogs() {
     return (
         <Box sx={{ height: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3, mb: 2 }}>
-                <FormControl fullWidth size="small">
-                    <InputLabel id="project-select-label">Select Project</InputLabel>
-                    <Select
-                        labelId="project-select-label"
-                        value={selectedProjectId}
-                        label="Select Project"
-                        onChange={e => setSelectedProjectId(e.target.value)}
-                    >
-                        <MenuItem value=""><em>-- Choose Project --</em></MenuItem>
-                        {projects.map(p => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
-                    </Select>
-                </FormControl>
+                
                 <FormControl fullWidth size="small" disabled={!selectedProjectId}>
                     <InputLabel id="endpoint-select-label">Select Endpoint</InputLabel>
                     <Select
