@@ -152,7 +152,29 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 @app.get("/api/auth/me", response_model=schemas.User)
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
-
+@app.put("/api/auth/me", response_model=schemas.User)
+def update_user(request: schemas.UserUpdateRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    if not auth.verify_password(request.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+        )
+    
+    # Check if email is being changed and if it already exists
+    if request.email != current_user.email:
+        existing_user = db.query(models.User).filter(models.User.email == request.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        current_user.email = request.email
+        
+    current_user.full_name = request.full_name
+    
+    if request.new_password:
+        current_user.hashed_password = auth.get_password_hash(request.new_password)
+        
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 @app.delete("/api/auth/me")
 def delete_user(request: schemas.UserDeleteRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     if not auth.verify_password(request.password, current_user.hashed_password):

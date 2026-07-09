@@ -14,9 +14,16 @@ class UserLogin(BaseModel):
 class UserDeleteRequest(BaseModel):
     password: str
 
+class UserUpdateRequest(BaseModel):
+    current_password: str
+    email: EmailStr
+    full_name: Optional[str] = None
+    new_password: Optional[str] = None
+
 class User(BaseModel):
     id: int
     email: str
+    full_name: Optional[str] = None
     class Config:
         from_attributes = True
 
