@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import SystemLimits from './pages/SystemLimits';
 import UserManagement from './pages/UserManagement';
 import AdminProjects from './pages/AdminProjects';
+import DatabaseSettings from './pages/DatabaseSettings';
 import Blocked from './pages/Blocked';
 
 const theme = createTheme({
@@ -62,6 +63,7 @@ export default function App() {
               <Route path="settings/limits" element={<SystemLimits />} />
               <Route path="settings/users" element={<UserManagement />} />
               <Route path="settings/projects" element={<AdminProjects />} />
+              <Route path="settings/database" element={<DatabaseSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -32,7 +32,6 @@ import StorageIcon from '@mui/icons-material/Storage';
 import SpeedIcon from '@mui/icons-material/Speed';
 import GroupIcon from '@mui/icons-material/Group';
 import FolderIcon from '@mui/icons-material/Folder';
-import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { useProject } from '../contexts/ProjectContext';
 import { fetchApi } from '../api';
 
@@ -110,7 +109,6 @@ export default function Layout() {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [projectAnchorEl, setProjectAnchorEl] = useState<null | HTMLElement>(null);
@@ -318,7 +316,7 @@ export default function Layout() {
               {/* Expanded sidebar: collapsible sub-menu */}
               <Collapse in={settingsMenuOpen && open} timeout="auto" unmountOnExit>
                 <List component="div" disablePadding>
-                  <ListItemButton sx={{ pl: 4 }} onClick={() => setSettingsOpen(true)}>
+                  <ListItemButton sx={{ pl: 4 }} selected={location.pathname === '/settings/database'} onClick={() => navigate('/settings/database')}>
                     <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><StorageIcon fontSize="small" /></ListItemIcon>
                     <ListItemText primary="Database" />
                   </ListItemButton>
@@ -345,7 +343,7 @@ export default function Layout() {
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               >
-                <MenuItem onClick={() => { setSettingsAnchorEl(null); setSettingsOpen(true); }}>
+                <MenuItem onClick={() => { setSettingsAnchorEl(null); navigate('/settings/database'); }}>
                   <ListItemIcon><StorageIcon fontSize="small" /></ListItemIcon>
                   Database
                 </MenuItem>
@@ -371,8 +369,6 @@ export default function Layout() {
         <DrawerHeader />
         <Outlet />
       </Box>
-
-      <DatabaseSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   );
 }
