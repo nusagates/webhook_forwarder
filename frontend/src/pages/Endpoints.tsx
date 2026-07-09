@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchApi, API_BASE_URL } from '../api';
+import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { Typography, Box, Paper, TextField, Button, Select, MenuItem, InputLabel, FormControl, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -215,12 +215,12 @@ export default function Endpoints() {
                                             <Typography variant="h6">{ep.name}</Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: '#f5f5f5', p: 1, borderRadius: 1, mt: 1 }}>
                                                 <Typography variant="body2" color="primary" sx={{ fontFamily: 'monospace' }}>
-                                                    {API_BASE_URL}/webhook/{ep.project_id}/{ep.slug}
+                                                    {window.location.origin}/webhook/{ep.project_id}/{ep.slug}
                                                 </Typography>
                                                 <Button 
                                                     size="small" 
                                                     onClick={() => {
-                                                        navigator.clipboard.writeText(`${API_BASE_URL}/webhook/${ep.project_id}/${ep.slug}`);
+                                                        navigator.clipboard.writeText(`${window.location.origin}/webhook/${ep.project_id}/${ep.slug}`);
                                                         toast.success('Webhook URL Copied!');
                                                     }}
                                                     sx={{ minWidth: 'auto', p: 0.5 }}

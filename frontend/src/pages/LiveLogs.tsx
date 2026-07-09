@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { fetchApi, API_BASE_URL } from '../api';
+import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
@@ -136,7 +136,7 @@ export default function LiveLogs() {
             {selectedEndpointId && (() => {
                 const ep = endpoints.find(e => e.id.toString() === selectedEndpointId);
                 if (!ep) return null;
-                const webhookUrl = `${API_BASE_URL}/webhook/${ep.project_id}/${ep.slug}`;
+                const webhookUrl = `${window.location.origin}/webhook/${ep.project_id}/${ep.slug}`;
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, bgcolor: '#e3f2fd', p: 1.5, borderRadius: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Your Unique Webhook URL:</Typography>
