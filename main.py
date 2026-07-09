@@ -189,6 +189,13 @@ def delete_user(request: schemas.UserDeleteRequest, current_user: models.User = 
     return {"status": "success", "message": "User deleted successfully"}
 
 # --- Project API Routes ---
+
+def get_system_setting(db: Session, key: str, default: str):
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+    if setting:
+        return setting.value
+    return default
+
 def get_project_with_role(db: Session, project_id: str, user_id: int):
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
