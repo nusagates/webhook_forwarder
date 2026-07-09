@@ -22,7 +22,7 @@ interface RecentLog {
     id: number;
     status_code: number;
     created_at: string;
-    source_ip: string;
+    client_ip: string;
 }
 
 interface Destination {
@@ -269,7 +269,7 @@ export default function AdminProjects() {
                                                                             {new Date(log.created_at).toLocaleString()}
                                                                         </TableCell>
                                                                         <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                                                                            {log.source_ip || '—'}
+                                                                            {log.client_ip || '—'}
                                                                         </TableCell>
                                                                         <TableCell>
                                                                             <Chip

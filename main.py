@@ -989,7 +989,7 @@ def get_all_projects_admin(
                 "slug": ep.slug,
                 "destinations": [{"id": d.id, "url": d.url, "is_active": d.is_active, "auth_type": d.auth_type} for d in destinations],
                 "log_count": log_count,
-                "recent_logs": [{"id": l.id, "status_code": l.status_code, "created_at": str(l.created_at), "source_ip": l.source_ip} for l in recent_logs]
+                "recent_logs": [{"id": l.id, "status_code": l.status_code, "created_at": str(l.created_at), "client_ip": l.client_ip} for l in recent_logs]
             })
         result.append({
             "id": p.id,
