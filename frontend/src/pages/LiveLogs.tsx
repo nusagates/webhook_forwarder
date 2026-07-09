@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
-import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button } from '@mui/material';
+import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -29,6 +29,7 @@ export default function LiveLogs() {
     const [logs, setLogs] = useState<DeliveryLog[]>([]);
     const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
     const [formatJson, setFormatJson] = useState(true);
+    const [clearDialogOpen, setClearDialogOpen] = useState(false);
     
     const wsRef = useRef<WebSocket | null>(null);
 
@@ -94,6 +95,19 @@ export default function LiveLogs() {
             toast.success('Webhook resend triggered!');
         } catch (err: any) {
             toast.error(err.message || 'Failed to resend webhook');
+        }
+    };
+
+    const handleClearLogs = async () => {
+        if (!selectedEndpointId) return;
+        try {
+            await fetchApi(`/api/endpoints/${selectedEndpointId}/logs`, { method: 'DELETE' });
+            setLogs([]);
+            setSelectedLogId(null);
+            setClearDialogOpen(false);
+            toast.success('All logs cleared for this endpoint');
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to clear logs');
         }
     };
 
@@ -181,8 +195,11 @@ export default function LiveLogs() {
                 <Box sx={{ flex: 1, display: 'flex', borderTop: '1px solid #e0e0e0', overflow: 'hidden' }}>
                     {/* LEFT SIDEBAR: Log List */}
                     <Box sx={{ width: '300px', borderRight: '1px solid #e0e0e0', overflowY: 'auto', bgcolor: '#f9f9f9' }}>
-                        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: '#fff' }}>
+                        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="subtitle2" color="text.secondary">INBOX ({logs.length}) Newest First</Typography>
+                            {!isViewer && logs.length > 0 && (
+                                <Button size="small" color="error" onClick={() => setClearDialogOpen(true)}>Clear All</Button>
+                            )}
                         </Box>
                         {logs.length === 0 ? (
                             <Typography color="text.secondary" sx={{ p: 3, fontStyle: 'italic', textAlign: 'center' }}>
@@ -363,6 +380,20 @@ export default function LiveLogs() {
                     </Box>
                 </Box>
             )}
+
+            {/* Clear Logs Confirmation Dialog */}
+            <Dialog open={clearDialogOpen} onClose={() => setClearDialogOpen(false)}>
+                <DialogTitle>Clear All Logs</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete all logs for this endpoint? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setClearDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={handleClearLogs} color="error" variant="contained">Clear All</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

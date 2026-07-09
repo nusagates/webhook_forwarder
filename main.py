@@ -411,6 +411,20 @@ def delete_log(log_id: int, current_user: models.User = Depends(auth.get_current
     db.commit()
     return {"status": "success"}
 
+@app.delete("/api/endpoints/{endpoint_id}/logs")
+def clear_logs(endpoint_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
+    if not endpoint:
+        raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor"]:
+        raise HTTPException(status_code=403, detail="Not authorized to clear logs in this project")
+        
+    db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).delete()
+    db.commit()
+    return {"status": "success"}
+
 @app.post("/api/logs/{log_id}/resend")
 async def resend_log(log_id: int, background_tasks: BackgroundTasks, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     log = db.query(models.DeliveryLog).filter(models.DeliveryLog.id == log_id).first()
