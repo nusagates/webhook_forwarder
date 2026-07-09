@@ -221,7 +221,7 @@ export default function UserManagement() {
                             fullWidth
                             value={limits.limit_projects}
                             onChange={e => setLimits({ ...limits, limit_projects: e.target.value })}
-                            placeholder="e.g. 5 (or blank for global)"
+                            helperText="Leave blank = use global limit. Set -1 for unlimited."
                         />
                         <TextField
                             label="Max Endpoints per Project"
@@ -229,7 +229,7 @@ export default function UserManagement() {
                             fullWidth
                             value={limits.limit_endpoints}
                             onChange={e => setLimits({ ...limits, limit_endpoints: e.target.value })}
-                            placeholder="e.g. 10 (or blank for global)"
+                            helperText="Leave blank = use global limit. Set -1 for unlimited."
                         />
                         <TextField
                             label="Max Logs Retention"
@@ -237,7 +237,7 @@ export default function UserManagement() {
                             fullWidth
                             value={limits.limit_logs}
                             onChange={e => setLimits({ ...limits, limit_logs: e.target.value })}
-                            placeholder="e.g. 1000 (or blank for global)"
+                            helperText="Leave blank = use global limit. Set -1 for unlimited."
                         />
                         <TextField
                             label="Max Destinations per Endpoint"
@@ -245,7 +245,7 @@ export default function UserManagement() {
                             fullWidth
                             value={limits.limit_destinations}
                             onChange={e => setLimits({ ...limits, limit_destinations: e.target.value })}
-                            placeholder="e.g. 5 (or blank for global)"
+                            helperText="Leave blank = use global limit. Set -1 for unlimited."
                         />
                     </Box>
                 </DialogContent>

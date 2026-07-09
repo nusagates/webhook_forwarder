@@ -233,7 +233,7 @@ def create_project(project: schemas.ProjectCreate, current_user: models.User = D
     else:
         max_projects = int(get_system_setting(db, "max_projects_per_user", "5"))
         
-    if current_count >= max_projects:
+    if max_projects != -1 and current_count >= max_projects:
         raise HTTPException(status_code=400, detail=f"Project limit reached. Maximum allowed is {max_projects}.")
 
     new_project = models.Project(name=project.name, description=project.description, user_id=current_user.id)
@@ -276,6 +276,16 @@ def create_endpoint(endpoint: schemas.EndpointCreate, current_user: models.User 
     if db_endpoint:
         raise HTTPException(status_code=400, detail="Slug already exists in this project")
     
+    # Check endpoint limits
+    owner = db.query(models.User).filter(models.User.id == project.user_id).first()
+    current_count = db.query(models.Endpoint).filter(models.Endpoint.project_id == endpoint.project_id).count()
+    if owner and owner.limit_endpoints is not None:
+        max_endpoints = owner.limit_endpoints
+    else:
+        max_endpoints = int(get_system_setting(db, "max_endpoints_per_project", "10"))
+    if max_endpoints != -1 and current_count >= max_endpoints:
+        raise HTTPException(status_code=400, detail=f"Endpoint limit reached for this project. Maximum allowed is {max_endpoints}.")
+
     new_endpoint = models.Endpoint(
         name=endpoint.name, 
         slug=endpoint.slug, 
@@ -317,6 +327,16 @@ def create_destination(endpoint_id: int, destination: schemas.DestinationCreate,
     if not project or role not in ["owner", "editor"]:
         raise HTTPException(status_code=403, detail="Not authorized to add destinations in this project")
     
+    # Check destination limits
+    owner = db.query(models.User).filter(models.User.id == project.user_id).first()
+    current_count = db.query(models.Destination).filter(models.Destination.endpoint_id == endpoint_id).count()
+    if owner and owner.limit_destinations is not None:
+        max_dests = owner.limit_destinations
+    else:
+        max_dests = int(get_system_setting(db, "max_destinations_per_endpoint", "5"))
+    if max_dests != -1 and current_count >= max_dests:
+        raise HTTPException(status_code=400, detail=f"Destination limit reached for this endpoint. Maximum allowed is {max_dests}.")
+
     new_dest = models.Destination(
         url=destination.url, 
         is_active=destination.is_active, 
