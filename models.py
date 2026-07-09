@@ -10,7 +10,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     
-    projects = relationship("Project", back_populates="owner")
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 
 class Project(Base):
     __tablename__ = "projects"
@@ -20,7 +20,7 @@ class Project(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     
     owner = relationship("User", back_populates="projects")
-    endpoints = relationship("Endpoint", back_populates="project")
+    endpoints = relationship("Endpoint", back_populates="project", cascade="all, delete-orphan")
 
 class Endpoint(Base):
     __tablename__ = "endpoints"
@@ -34,8 +34,8 @@ class Endpoint(Base):
     auth_config = Column(String, nullable=True) # JSON string
     
     project = relationship("Project", back_populates="endpoints")
-    destinations = relationship("Destination", back_populates="endpoint")
-    logs = relationship("DeliveryLog", back_populates="endpoint")
+    destinations = relationship("Destination", back_populates="endpoint", cascade="all, delete-orphan")
+    logs = relationship("DeliveryLog", back_populates="endpoint", cascade="all, delete-orphan")
 
 class Destination(Base):
     __tablename__ = "destinations"
@@ -46,7 +46,7 @@ class Destination(Base):
     is_active = Column(Boolean, default=True)
 
     endpoint = relationship("Endpoint", back_populates="destinations")
-    logs = relationship("DeliveryLog", back_populates="destination")
+    logs = relationship("DeliveryLog", back_populates="destination", cascade="all, delete-orphan")
 
 class DeliveryLog(Base):
     __tablename__ = "delivery_logs"

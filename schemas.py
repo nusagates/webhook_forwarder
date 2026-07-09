@@ -11,6 +11,9 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class UserDeleteRequest(BaseModel):
+    password: str
+
 class User(BaseModel):
     id: int
     email: str

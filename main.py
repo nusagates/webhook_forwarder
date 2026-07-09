@@ -153,6 +153,17 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+@app.delete("/api/auth/me")
+def delete_user(request: schemas.UserDeleteRequest, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    if not auth.verify_password(request.password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+        )
+    db.delete(current_user)
+    db.commit()
+    return {"status": "success", "message": "User deleted successfully"}
+
 # --- Project API Routes ---
 @app.get("/api/projects", response_model=List[schemas.Project])
 def read_projects(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
