@@ -18,6 +18,8 @@ class User(Base):
     limit_endpoints = Column(Integer, nullable=True)
     limit_logs = Column(Integer, nullable=True)
     limit_destinations = Column(Integer, nullable=True)
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
     
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 

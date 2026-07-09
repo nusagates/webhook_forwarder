@@ -129,7 +129,106 @@ async def receive_webhook(project_id: str, slug: str, request: Request, backgrou
     
     return {"status": "success", "message": "Webhook received and queued for forwarding"}
 
+# --- MailerSend Reset Email Helper ---
+def get_mailersend_domain(token: str) -> str:
+    import urllib.request
+    import urllib.error
+    import json
+    try:
+        req = urllib.request.Request(
+            "https://api.mailersend.com/v1/domains",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            res = json.loads(response.read().decode())
+            if res.get("data") and len(res["data"]) > 0:
+                return res["data"][0].get("name", "trial-z86g7gl5exogewea.mlsender.net")
+    except Exception as e:
+        print(f"Error fetching MailerSend domain: {e}")
+    return "trial-z86g7gl5exogewea.mlsender.net"
+
+def send_reset_email(email: str, token: str, reset_link: str):
+    import urllib.request
+    import urllib.error
+    import json
+    api_token = "mlsn.c1022fff173ad451b4c37be06fcd10744891f32371b4ef94a4deab3942f2c56d"
+    domain = get_mailersend_domain(api_token)
+    sender = f"noreply@{domain}"
+    
+    payload = {
+        "from": {"email": sender, "name": "Webhook Forwarder"},
+        "to": [{"email": email}],
+        "subject": "Reset Your Password - Webhook Forwarder",
+        "text": f"You requested a password reset. Click the following link to reset your password:\n\n{reset_link}\n\nThis link will expire in 1 hour.",
+        "html": f"<p>You requested a password reset. Click the link below to reset your password:</p><p><a href='{reset_link}'>{reset_link}</a></p><p>This link will expire in 1 hour.</p>"
+    }
+    
+    try:
+        req = urllib.request.Request(
+            "https://api.mailersend.com/v1/email",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {api_token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            print("Reset email sent via MailerSend. Status:", response.status)
+            return True
+    except Exception as e:
+        if isinstance(e, urllib.error.HTTPError):
+            print("MailerSend Error body:", e.read().decode())
+        print(f"Failed to send MailerSend email: {e}")
+        return False
+
 # --- Auth API Routes ---
+@app.post("/api/auth/forgot-password")
+def forgot_password(req: schemas.ForgotPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == req.email).first()
+    if not user:
+        return {"status": "success", "message": "If the email exists, a reset link has been sent."}
+    
+    # Generate token
+    token = str(uuid.uuid4())
+    user.reset_token = token
+    user.reset_token_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    db.commit()
+    
+    # Construct reset link
+    referer = request.headers.get("referer")
+    if referer:
+        from urllib.parse import urlparse
+        parsed = urlparse(referer)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
+        
+    reset_link = f"{base_url}/reset-password?token={token}&email={req.email}"
+    
+    success = send_reset_email(req.email, token, reset_link)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to send password reset email")
+        
+    return {"status": "success", "message": "If the email exists, a reset link has been sent."}
+
+@app.post("/api/auth/reset-password")
+def reset_password(req: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == req.email).first()
+    if not user or not user.reset_token or user.reset_token != req.token:
+        raise HTTPException(status_code=400, detail="Invalid token or email")
+        
+    if not user.reset_token_expires or user.reset_token_expires < datetime.datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+        
+    user.hashed_password = auth.get_password_hash(req.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    
+    return {"status": "success", "message": "Password reset successfully"}
+
 @app.post("/api/auth/register", response_model=schemas.User)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()

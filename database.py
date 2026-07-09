@@ -38,6 +38,16 @@ try:
             conn.commit()
         except:
             pass
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255) NULL"))
+            conn.commit()
+        except:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_expires DATETIME NULL"))
+            conn.commit()
+        except:
+            pass
 except:
     pass
 
