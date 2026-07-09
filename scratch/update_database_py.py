@@ -1,4 +1,8 @@
-from sqlalchemy import create_engine, event
+import os
+
+db_path = "d:/Project/Python/webhook_forwarder/database.py"
+
+content = """from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 from dotenv import load_dotenv
@@ -32,3 +36,9 @@ def get_db():
         yield db
     finally:
         db.close()
+"""
+
+with open(db_path, "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("Updated database.py")
