@@ -12,6 +12,10 @@ export default function Register() {
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (password.length < 8) {
+            toast.error('Password must be at least 8 characters long');
+            return;
+        }
         setIsLoading(true);
         try {
             await fetchApi('/api/auth/register', {
