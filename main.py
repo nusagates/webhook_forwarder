@@ -1077,6 +1077,9 @@ def update_user_admin(user_id: int, user_update: schemas.UserAdminUpdate, curren
     db_user.limit_logs = user_update.limit_logs
     db_user.limit_destinations = user_update.limit_destinations
     
+    if user_update.password:
+        db_user.hashed_password = auth.get_password_hash(user_update.password)
+        
     db.commit()
     db.refresh(db_user)
     return db_user

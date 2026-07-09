@@ -1,6 +1,6 @@
 import { useConfirm } from '../components/ConfirmDialog';
 import { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Divider } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -26,6 +26,7 @@ export default function UserManagement() {
         limit_logs: '',
         limit_destinations: ''
     });
+    const [newPassword, setNewPassword] = useState('');
 
     useEffect(() => {
         document.title = "User Management - Admin";
@@ -111,6 +112,7 @@ export default function UserManagement() {
             limit_logs: user.limit_logs != null ? user.limit_logs.toString() : '',
             limit_destinations: user.limit_destinations != null ? user.limit_destinations.toString() : ''
         });
+        setNewPassword('');
         setEditOpen(true);
     };
 
@@ -127,6 +129,7 @@ export default function UserManagement() {
                     limit_endpoints: limits.limit_endpoints ? parseInt(limits.limit_endpoints) : null,
                     limit_logs: limits.limit_logs ? parseInt(limits.limit_logs) : null,
                     limit_destinations: limits.limit_destinations ? parseInt(limits.limit_destinations) : null,
+                    password: newPassword || null
                 })
             });
             toast.success('Limits updated successfully', { id: tid });
@@ -246,6 +249,20 @@ export default function UserManagement() {
                             value={limits.limit_destinations}
                             onChange={e => setLimits({ ...limits, limit_destinations: e.target.value })}
                             helperText="Leave blank = use global limit. Set -1 for unlimited."
+                        />
+                        
+                        <Divider sx={{ my: 1 }} />
+                        <Typography variant="subtitle2" color="text.secondary">
+                            Security Settings
+                        </Typography>
+                        
+                        <TextField
+                            label="Force New Password"
+                            type="text"
+                            fullWidth
+                            value={newPassword}
+                            onChange={e => setNewPassword(e.target.value)}
+                            helperText="Leave blank to keep current password. Enter a new value to force reset the user's password."
                         />
                     </Box>
                 </DialogContent>
