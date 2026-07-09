@@ -2,7 +2,8 @@ from fastapi import FastAPI, Request, Depends, HTTPException, BackgroundTasks, s
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
 import re
 import json
 import hmac
