@@ -229,17 +229,20 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
                     </Box>
                 )}
             </DialogContent>
-            <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
-                <Box>
-                    <Button onClick={handleTest} color="primary" variant="outlined" sx={{ mr: 1 }}>Test Connection</Button>
-                    {engine !== 'sqlite' && <Button onClick={handleVerify} color="info" variant="outlined" sx={{ mr: 1 }}>Verify Data</Button>}
-                    {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined" sx={{ mr: 1 }}>Create DB</Button>}
-                    <Button onClick={handleRestart} color="error" variant="outlined">Restart Service</Button>
+            <DialogActions sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch', bgcolor: 'background.default' }}>
+                {/* Secondary / Utility Tools */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', p: 1, border: '1px dashed #ccc', borderRadius: 1 }}>
+                    <Button onClick={handleTest} color="primary" variant="outlined" size="small">Test Connection</Button>
+                    {engine !== 'sqlite' && <Button onClick={handleVerify} color="info" variant="outlined" size="small">Verify Data</Button>}
+                    {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined" size="small">Create DB</Button>}
+                    <Button onClick={handleRestart} color="error" variant="outlined" size="small">Restart Service</Button>
                 </Box>
-                <Box>
-                    <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>
-                    {engine !== 'sqlite' && <Button onClick={handleSwitch} variant="outlined" color="primary" sx={{ mr: 1 }}>Save & Switch DB</Button>}
-                    <Button onClick={handleMigrate} variant="contained" color="warning">Migrate Data</Button>
+                
+                {/* Primary Actions */}
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <Button onClick={handleClose} color="inherit" sx={{ minWidth: 100 }}>Cancel</Button>
+                    {engine !== 'sqlite' && <Button onClick={handleSwitch} variant="contained" color="primary" sx={{ minWidth: 150 }}>Save & Switch DB</Button>}
+                    <Button onClick={handleMigrate} variant="contained" color="warning" sx={{ minWidth: 150 }}>Migrate Data</Button>
                 </Box>
             </DialogActions>
         </Dialog>
