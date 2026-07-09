@@ -772,11 +772,8 @@ def migrate_database(config: DbConfig, current_user: User = Depends(auth.get_cur
         for table in tables:
             records = db.query(table).all()
             for record in records:
-                # Expunge from old session and merge to new session
-                db.expunge(record)
-                from sqlalchemy.orm import make_transient
-                make_transient(record)
-                new_db.add(record)
+                # Use merge to gracefully handle existing records (updates them instead of duplicate PK error)
+                new_db.merge(record)
             
             try:
                 new_db.commit()
