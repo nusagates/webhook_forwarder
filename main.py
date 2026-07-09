@@ -139,10 +139,7 @@ def send_reset_email(email: str, token: str, reset_link: str):
     import os
     
     api_token = "mlsn.c1022fff173ad451b4c37be06fcd10744891f32371b4ef94a4deab3942f2c56d"
-    sender = os.getenv("MAILERSEND_SENDER_EMAIL")
-    if not sender:
-        print("Error: MAILERSEND_SENDER_EMAIL environment variable is not set.")
-        return False
+    sender = os.getenv("MAILERSEND_SENDER_EMAIL", "noreply@hook.web.id")
         
     payload = {
         "from": {"email": sender, "name": "Webhook Forwarder"},
