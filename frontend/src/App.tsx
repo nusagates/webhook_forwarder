@@ -13,6 +13,7 @@ import LiveLogs from './pages/LiveLogs';
 import Profile from './pages/Profile';
 import SystemLimits from './pages/SystemLimits';
 import UserManagement from './pages/UserManagement';
+import Blocked from './pages/Blocked';
 
 const theme = createTheme({
   palette: {
@@ -49,6 +50,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+        <Route path="/blocked" element={<Blocked />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
               <Route index element={<Navigate to="/projects" replace />} />

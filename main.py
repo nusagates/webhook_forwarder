@@ -867,6 +867,10 @@ def update_user_admin(user_id: int, user_update: schemas.UserAdminUpdate, curren
         
     db_user.is_admin = user_update.is_admin
     db_user.is_blocked = user_update.is_blocked
+    if user_update.is_blocked:
+        db_user.block_reason = user_update.block_reason
+    else:
+        db_user.block_reason = None
     db_user.limit_projects = user_update.limit_projects
     db_user.limit_endpoints = user_update.limit_endpoints
     db_user.limit_logs = user_update.limit_logs

@@ -13,6 +13,7 @@ class User(Base):
     
     is_admin = Column(Boolean, default=False)
     is_blocked = Column(Boolean, default=False)
+    block_reason = Column(String, nullable=True)
     limit_projects = Column(Integer, nullable=True)
     limit_endpoints = Column(Integer, nullable=True)
     limit_logs = Column(Integer, nullable=True)

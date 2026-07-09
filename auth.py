@@ -45,5 +45,5 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     if user.is_blocked:
-        raise HTTPException(status_code=401, detail="Your account has been blocked by an administrator.")
+        raise HTTPException(status_code=403, detail={"code": "ACCOUNT_BLOCKED", "reason": user.block_reason or "No reason provided."})
     return user

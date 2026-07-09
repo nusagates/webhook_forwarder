@@ -139,6 +139,7 @@ class UserOutAdmin(BaseModel):
     full_name: Optional[str]
     is_admin: bool
     is_blocked: bool
+    block_reason: Optional[str]
     limit_projects: Optional[int]
     limit_endpoints: Optional[int]
     limit_logs: Optional[int]
@@ -149,6 +150,7 @@ class UserOutAdmin(BaseModel):
 class UserAdminUpdate(BaseModel):
     is_admin: bool
     is_blocked: bool
+    block_reason: Optional[str]
     limit_projects: Optional[int] = None
     limit_endpoints: Optional[int] = None
     limit_logs: Optional[int] = None

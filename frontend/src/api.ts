@@ -32,6 +32,15 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle blocked user redirect
+        if (response.status === 403 && errorData.detail && errorData.detail.code === 'ACCOUNT_BLOCKED') {
+            localStorage.setItem('block_reason', errorData.detail.reason || 'No reason provided.');
+            if (window.location.pathname !== '/blocked') {
+                window.location.href = '/blocked';
+            }
+            throw new Error('Account blocked');
+        }
         let errorMessage = 'An error occurred';
         if (typeof errorData.detail === 'string') {
             errorMessage = errorData.detail;

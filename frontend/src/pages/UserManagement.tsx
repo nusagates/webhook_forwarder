@@ -16,6 +16,9 @@ export default function UserManagement() {
     
     // Edit Dialog state
     const [editOpen, setEditOpen] = useState(false);
+    const [blockOpen, setBlockOpen] = useState(false);
+    const [blockReason, setBlockReason] = useState('');
+    const [userToBlock, setUserToBlock] = useState<any>(null);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [limits, setLimits] = useState({
         limit_projects: '',
@@ -60,23 +63,41 @@ export default function UserManagement() {
     };
 
     const toggleBlock = async (user: any) => {
-        if (!await confirm({ message: `Are you sure you want to ${user.is_blocked ? 'unblock' : 'block'} ${user.email}?`, isDanger: true })) return;
+        if (!user.is_blocked) {
+            setUserToBlock(user);
+            setBlockReason('');
+            setBlockOpen(true);
+            return;
+        }
+        
+        if (!await confirm({ message: `Are you sure you want to unblock ${user.email}?`, isDanger: true })) return;
+        executeBlockToggle(user, false, "");
+    };
+
+    const executeBlockToggle = async (user: any, block: boolean, reason: string) => {
         try {
             await fetchApi(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     is_admin: user.is_admin,
-                    is_blocked: !user.is_blocked,
+                    is_blocked: block,
+                    block_reason: block ? reason : null,
                     limit_projects: user.limit_projects,
                     limit_endpoints: user.limit_endpoints,
                     limit_logs: user.limit_logs
                 })
             });
-            toast.success(user.is_blocked ? 'User unblocked' : 'User blocked');
+            toast.success(block ? 'User blocked' : 'User unblocked');
             fetchUsers();
         } catch (e: any) {
             toast.error(e.message || "Failed to update block status");
         }
+    };
+    
+    const submitBlock = () => {
+        if (!userToBlock) return;
+        executeBlockToggle(userToBlock, true, blockReason);
+        setBlockOpen(false);
     };
 
     const openEditDialog = (user: any) => {
@@ -218,6 +239,31 @@ export default function UserManagement() {
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setEditOpen(false)}>Cancel</Button>
                     <Button onClick={handleSaveLimits} variant="contained" color="primary">Save Limits</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Block Dialog */}
+            <Dialog open={blockOpen} onClose={() => setBlockOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Block User</DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ mb: 2 }}>
+                        Please provide a reason for blocking <strong>{userToBlock?.email}</strong>. This reason will be shown to the user when they try to access the application.
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="Reason for suspension"
+                        type="text"
+                        fullWidth
+                        variant="outlined"
+                        value={blockReason}
+                        onChange={(e) => setBlockReason(e.target.value)}
+                        placeholder="e.g. Violation of terms of service"
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBlockOpen(false)}>Cancel</Button>
+                    <Button onClick={submitBlock} color="error" variant="contained">Block User</Button>
                 </DialogActions>
             </Dialog>
         </Box>
