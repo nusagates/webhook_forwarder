@@ -13,6 +13,7 @@ import LiveLogs from './pages/LiveLogs';
 import Profile from './pages/Profile';
 import SystemLimits from './pages/SystemLimits';
 import UserManagement from './pages/UserManagement';
+import AdminProjects from './pages/AdminProjects';
 import Blocked from './pages/Blocked';
 
 const theme = createTheme({
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="profile" element={<Profile />} />
               <Route path="settings/limits" element={<SystemLimits />} />
               <Route path="settings/users" element={<UserManagement />} />
+              <Route path="settings/projects" element={<AdminProjects />} />
           </Route>
         </Routes>
       </BrowserRouter>

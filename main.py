@@ -956,6 +956,51 @@ def update_system_settings_api(settings: schemas.SystemSettingUpdate, current_us
     return {"status": "success"}
 
 
+@app.get("/api/admin/projects")
+def get_all_projects_admin(
+    page: int = 1,
+    limit: int = 10,
+    search: str = "",
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    check_super_admin(current_user)
+    query = db.query(models.Project)
+    if search:
+        query = query.filter(models.Project.name.ilike(f"%{search}%"))
+    
+    total = query.count()
+    projects = query.offset((page - 1) * limit).limit(limit).all()
+    
+    result = []
+    for p in projects:
+        owner = db.query(models.User).filter(models.User.id == p.user_id).first()
+        endpoints = db.query(models.Endpoint).filter(models.Endpoint.project_id == p.id).all()
+        endpoints_data = []
+        for ep in endpoints:
+            destinations = db.query(models.Destination).filter(models.Destination.endpoint_id == ep.id).all()
+            log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == ep.id).count()
+            recent_logs = db.query(models.DeliveryLog).filter(
+                models.DeliveryLog.endpoint_id == ep.id
+            ).order_by(models.DeliveryLog.created_at.desc()).limit(5).all()
+            endpoints_data.append({
+                "id": ep.id,
+                "name": ep.name,
+                "slug": ep.slug,
+                "destinations": [{"id": d.id, "url": d.url, "is_active": d.is_active, "auth_type": d.auth_type} for d in destinations],
+                "log_count": log_count,
+                "recent_logs": [{"id": l.id, "status_code": l.status_code, "created_at": str(l.created_at), "source_ip": l.source_ip} for l in recent_logs]
+            })
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "owner_email": owner.email if owner else "unknown",
+            "owner_id": p.user_id,
+            "endpoints": endpoints_data
+        })
+    return {"total": total, "page": page, "limit": limit, "items": result}
+
 @app.get("/api/admin/users", response_model=List[schemas.UserOutAdmin])
 def get_all_users(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     check_super_admin(current_user)

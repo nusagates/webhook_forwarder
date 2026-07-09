@@ -31,6 +31,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import StorageIcon from '@mui/icons-material/Storage';
 import SpeedIcon from '@mui/icons-material/Speed';
 import GroupIcon from '@mui/icons-material/Group';
+import FolderIcon from '@mui/icons-material/Folder';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { useProject } from '../contexts/ProjectContext';
 import { fetchApi } from '../api';
@@ -329,6 +330,10 @@ export default function Layout() {
                     <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><GroupIcon fontSize="small" /></ListItemIcon>
                     <ListItemText primary="Users" />
                   </ListItemButton>
+                  <ListItemButton sx={{ pl: 4 }} selected={location.pathname === '/settings/projects'} onClick={() => navigate('/settings/projects')}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: 2 }}><FolderIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText primary="All Projects" />
+                  </ListItemButton>
                 </List>
               </Collapse>
 
@@ -351,6 +356,10 @@ export default function Layout() {
                 <MenuItem onClick={() => { setSettingsAnchorEl(null); navigate('/settings/users'); }}>
                   <ListItemIcon><GroupIcon fontSize="small" /></ListItemIcon>
                   Users
+                </MenuItem>
+                <MenuItem onClick={() => { setSettingsAnchorEl(null); navigate('/settings/projects'); }}>
+                  <ListItemIcon><FolderIcon fontSize="small" /></ListItemIcon>
+                  All Projects
                 </MenuItem>
               </Menu>
             </>
