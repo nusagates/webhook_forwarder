@@ -38,6 +38,8 @@ class TokenData(BaseModel):
 class DestinationBase(BaseModel):
     url: str
     is_active: bool = True
+    auth_type: str = "none"
+    auth_config: Optional[str] = None
 
 class DestinationCreate(DestinationBase):
     pass

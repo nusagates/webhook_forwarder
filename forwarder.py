@@ -45,12 +45,36 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
             async with httpx.AsyncClient(timeout=10.0) as client:
                 for dest in active_destinations:
                     try:
+                        import base64
+                        dest_headers = headers.copy()
+                        auth_type = dest.auth_type
+                        auth_config_str = dest.auth_config or "{}"
+                        
+                        try:
+                            auth_config = json.loads(auth_config_str)
+                        except:
+                            auth_config = {}
+                            
+                        if auth_type == "basic":
+                            username = auth_config.get("username", "")
+                            password = auth_config.get("password", "")
+                            auth_str = base64.b64encode(f"{username}:{password}".encode()).decode()
+                            dest_headers["Authorization"] = f"Basic {auth_str}"
+                        elif auth_type == "bearer":
+                            token = auth_config.get("token", "")
+                            dest_headers["Authorization"] = f"Bearer {token}"
+                        elif auth_type == "custom_header":
+                            header_name = auth_config.get("header_name", "")
+                            header_value = auth_config.get("header_value", "")
+                            if header_name:
+                                dest_headers[header_name] = header_value
+
                         # Forward the payload with original headers and method
                         res = await client.request(
                             method, 
                             dest.url, 
                             content=payload.encode('utf-8') if isinstance(payload, str) else payload,
-                            headers=headers
+                            headers=dest_headers
                         )
                         responses.append(f"[{dest.url}] HTTP {res.status_code}: {res.text[:200]}")
                         log_dict["status_code"] = res.status_code # Store the last status code (or could compute average/min/max)

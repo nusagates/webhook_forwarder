@@ -56,6 +56,8 @@ class Destination(Base):
     endpoint_id = Column(Integer, ForeignKey("endpoints.id"))
     url = Column(String)
     is_active = Column(Boolean, default=True)
+    auth_type = Column(String, default="none")
+    auth_config = Column(String, nullable=True) # JSON string
 
     endpoint = relationship("Endpoint", back_populates="destinations")
     logs = relationship("DeliveryLog", back_populates="destination", cascade="all, delete-orphan")

@@ -26,6 +26,8 @@ export default function Endpoints() {
     const [isCreating, setIsCreating] = useState(false);
     const [newDestUrl, setNewDestUrl] = useState('');
     const [activeEndpointId, setActiveEndpointId] = useState<number | null>(null);
+    const [newDestAuthType, setNewDestAuthType] = useState('none');
+    const [newDestAuthConfig, setNewDestAuthConfig] = useState<{ [key: string]: string }>({});
 
     const [newAuthType, setNewAuthType] = useState('none');
     const [newAuthConfig, setNewAuthConfig] = useState<{ [key: string]: string }>({});
@@ -143,13 +145,46 @@ export default function Endpoints() {
         try {
             await fetchApi(`/api/endpoints/${epId}/destinations`, {
                 method: 'POST',
-                body: JSON.stringify({ url: newDestUrl })
+                body: JSON.stringify({ 
+                    url: newDestUrl,
+                    auth_type: newDestAuthType,
+                    auth_config: Object.keys(newDestAuthConfig).length > 0 ? JSON.stringify(newDestAuthConfig) : null
+                })
             });
             setNewDestUrl('');
+            setNewDestAuthType('none');
+            setNewDestAuthConfig({});
             setActiveEndpointId(null);
             loadEndpoints(selectedProjectId);
             toast.success('Destination added!');
         } catch (err: any) { toast.error(err.message); }
+    };
+
+    const handleTestDestination = async () => {
+        try {
+            const parsedUrl = new URL(newDestUrl);
+            if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+                throw new Error("Must be http or https");
+            }
+        } catch (err) {
+            toast.error('Invalid URL format. Must start with http:// or https://');
+            return;
+        }
+
+        const tid = toast.loading('Testing connection...');
+        try {
+            const res = await fetchApi('/api/utils/test-destination', {
+                method: 'POST',
+                body: JSON.stringify({
+                    url: newDestUrl,
+                    auth_type: newDestAuthType,
+                    auth_config: Object.keys(newDestAuthConfig).length > 0 ? JSON.stringify(newDestAuthConfig) : null
+                })
+            });
+            toast.success(`Success! ${res.message}`, { id: tid });
+        } catch (err: any) {
+            toast.error(`Test failed: ${err.message}`, { id: tid });
+        }
     };
 
     return (
@@ -295,25 +330,56 @@ export default function Endpoints() {
                                     </List>
                                     
                                     {!isViewer && (
-                                        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                                            <TextField 
-                                                size="small" 
-                                                placeholder="Add new destination URL" 
-                                                fullWidth
-                                                value={activeEndpointId === ep.id ? newDestUrl : ''}
-                                                onChange={e => {
-                                                    setActiveEndpointId(ep.id);
-                                                    setNewDestUrl(e.target.value);
-                                                }}
-                                            />
-                                            <Button 
-                                                variant="contained" 
-                                                size="small"
-                                                disabled={!newDestUrl || activeEndpointId !== ep.id}
-                                                onClick={(e) => handleAddDestination(e, ep.id)}
-                                            >
-                                                Add
-                                            </Button>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mt: 2, bgcolor: '#f5f5f5', p: 1.5, borderRadius: 1 }}>
+                                            <Typography variant="subtitle2">Add New Destination</Typography>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <TextField 
+                                                    size="small" 
+                                                    placeholder="Destination URL (http/https)" 
+                                                    fullWidth
+                                                    value={activeEndpointId === ep.id ? newDestUrl : ''}
+                                                    onChange={e => {
+                                                        setActiveEndpointId(ep.id);
+                                                        setNewDestUrl(e.target.value);
+                                                    }}
+                                                />
+                                                <Button variant="outlined" size="small" onClick={handleTestDestination} disabled={!newDestUrl || activeEndpointId !== ep.id} sx={{ minWidth: 140 }}>
+                                                    Test Connection
+                                                </Button>
+                                                <Button variant="contained" size="small" onClick={(e) => handleAddDestination(e, ep.id)} disabled={!newDestUrl || activeEndpointId !== ep.id}>
+                                                    Add
+                                                </Button>
+                                            </Box>
+                                            
+                                            {activeEndpointId === ep.id && (
+                                                <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                                    <FormControl size="small" sx={{ minWidth: 150 }}>
+                                                        <InputLabel>Auth Type</InputLabel>
+                                                        <Select value={newDestAuthType} label="Auth Type" onChange={e => setNewDestAuthType(e.target.value)}>
+                                                            <MenuItem value="none">None</MenuItem>
+                                                            <MenuItem value="basic">Basic Auth</MenuItem>
+                                                            <MenuItem value="bearer">Bearer Token</MenuItem>
+                                                            <MenuItem value="custom_header">Custom Header</MenuItem>
+                                                        </Select>
+                                                    </FormControl>
+                                                    
+                                                    {newDestAuthType === 'basic' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Username" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, username: e.target.value})} />
+                                                            <TextField size="small" placeholder="Password" fullWidth type="password" onChange={e => setNewDestAuthConfig({...newDestAuthConfig, password: e.target.value})} />
+                                                        </Box>
+                                                    )}
+                                                    {newDestAuthType === 'bearer' && (
+                                                        <TextField size="small" placeholder="Token" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, token: e.target.value})} />
+                                                    )}
+                                                    {newDestAuthType === 'custom_header' && (
+                                                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                                                            <TextField size="small" placeholder="Header Name (e.g., x-api-key)" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_name: e.target.value})} />
+                                                            <TextField size="small" placeholder="Header Value" fullWidth onChange={e => setNewDestAuthConfig({...newDestAuthConfig, header_value: e.target.value})} />
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            )}
                                         </Box>
                                     )}
                                 </CardContent>

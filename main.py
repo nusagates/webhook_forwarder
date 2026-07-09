@@ -299,11 +299,67 @@ def create_destination(endpoint_id: int, destination: schemas.DestinationCreate,
     if not project or role not in ["owner", "editor"]:
         raise HTTPException(status_code=403, detail="Not authorized to add destinations in this project")
     
-    new_dest = models.Destination(url=destination.url, is_active=destination.is_active, endpoint_id=endpoint_id)
+    new_dest = models.Destination(
+        url=destination.url, 
+        is_active=destination.is_active, 
+        auth_type=destination.auth_type,
+        auth_config=destination.auth_config,
+        endpoint_id=endpoint_id
+    )
     db.add(new_dest)
     db.commit()
     db.refresh(new_dest)
     return new_dest
+
+class TestDestinationRequest(BaseModel):
+    url: str
+    auth_type: str = "none"
+    auth_config: Optional[str] = None
+
+@app.post("/api/utils/test-destination")
+async def test_destination(request: TestDestinationRequest, current_user: models.User = Depends(auth.get_current_user)):
+    import httpx
+    from pydantic import AnyHttpUrl
+    import json
+    import base64
+    
+    headers = {}
+    auth_type = request.auth_type
+    auth_config_str = request.auth_config or "{}"
+    
+    try:
+        auth_config = json.loads(auth_config_str)
+    except:
+        auth_config = {}
+        
+    if auth_type == "basic":
+        username = auth_config.get("username", "")
+        password = auth_config.get("password", "")
+        auth_str = base64.b64encode(f"{username}:{password}".encode()).decode()
+        headers["Authorization"] = f"Basic {auth_str}"
+    elif auth_type == "bearer":
+        token = auth_config.get("token", "")
+        headers["Authorization"] = f"Bearer {token}"
+    elif auth_type == "custom_header":
+        header_name = auth_config.get("header_name", "")
+        header_value = auth_config.get("header_value", "")
+        if header_name:
+            headers[header_name] = header_value
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            res = await client.post(request.url, json={"test": True}, headers=headers)
+            return {
+                "status": "success", 
+                "message": f"Connection successful. Server returned {res.status_code}",
+                "status_code": res.status_code
+            }
+    except httpx.ConnectTimeout:
+        raise HTTPException(status_code=400, detail="Connection timed out. Server might be down.")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=400, detail=f"Request failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error connecting: {str(e)}")
 
 @app.delete("/api/projects/{project_id}")
 def delete_project(project_id: str, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
