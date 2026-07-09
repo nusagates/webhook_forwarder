@@ -1,10 +1,11 @@
 import { useConfirm } from '../components/ConfirmDialog';
 import { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress, Divider } from '@mui/material';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 
@@ -26,7 +27,8 @@ export default function UserManagement() {
         limit_logs: '',
         limit_destinations: ''
     });
-    const [newPassword, setNewPassword] = useState('');
+    const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+    const [resetPasswordVal, setResetPasswordVal] = useState('');
 
     useEffect(() => {
         document.title = "User Management - Admin";
@@ -112,8 +114,36 @@ export default function UserManagement() {
             limit_logs: user.limit_logs != null ? user.limit_logs.toString() : '',
             limit_destinations: user.limit_destinations != null ? user.limit_destinations.toString() : ''
         });
-        setNewPassword('');
         setEditOpen(true);
+    };
+
+    const openResetPasswordDialog = (user: any) => {
+        setSelectedUser(user);
+        setResetPasswordVal('');
+        setResetPasswordOpen(true);
+    };
+
+    const handleResetPassword = async () => {
+        if (!selectedUser || !resetPasswordVal) return;
+        const tid = toast.loading('Resetting password...');
+        try {
+            await fetchApi(`/api/admin/users/${selectedUser.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    is_admin: selectedUser.is_admin,
+                    is_blocked: selectedUser.is_blocked,
+                    limit_projects: selectedUser.limit_projects,
+                    limit_endpoints: selectedUser.limit_endpoints,
+                    limit_logs: selectedUser.limit_logs,
+                    limit_destinations: selectedUser.limit_destinations,
+                    password: resetPasswordVal
+                })
+            });
+            toast.success('Password reset successfully', { id: tid });
+            setResetPasswordOpen(false);
+        } catch (e: any) {
+            toast.error(e.message || "Failed to reset password", { id: tid });
+        }
     };
 
     const handleSaveLimits = async () => {
@@ -128,8 +158,7 @@ export default function UserManagement() {
                     limit_projects: limits.limit_projects ? parseInt(limits.limit_projects) : null,
                     limit_endpoints: limits.limit_endpoints ? parseInt(limits.limit_endpoints) : null,
                     limit_logs: limits.limit_logs ? parseInt(limits.limit_logs) : null,
-                    limit_destinations: limits.limit_destinations ? parseInt(limits.limit_destinations) : null,
-                    password: newPassword || null
+                    limit_destinations: limits.limit_destinations ? parseInt(limits.limit_destinations) : null
                 })
             });
             toast.success('Limits updated successfully', { id: tid });
@@ -202,6 +231,9 @@ export default function UserManagement() {
                                     <IconButton onClick={() => openEditDialog(user)} color="info" title="Edit Limits" disabled={user.id === 1}>
                                         <EditIcon />
                                     </IconButton>
+                                    <IconButton onClick={() => openResetPasswordDialog(user)} color="warning" title="Reset Password" disabled={user.id === 1}>
+                                        <VpnKeyIcon />
+                                    </IconButton>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -250,25 +282,37 @@ export default function UserManagement() {
                             onChange={e => setLimits({ ...limits, limit_destinations: e.target.value })}
                             helperText="Leave blank = use global limit. Set -1 for unlimited."
                         />
-                        
-                        <Divider sx={{ my: 1 }} />
-                        <Typography variant="subtitle2" color="text.secondary">
-                            Security Settings
-                        </Typography>
-                        
-                        <TextField
-                            label="Force New Password"
-                            type="text"
-                            fullWidth
-                            value={newPassword}
-                            onChange={e => setNewPassword(e.target.value)}
-                            helperText="Leave blank to keep current password. Enter a new value to force reset the user's password."
-                        />
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setEditOpen(false)}>Cancel</Button>
                     <Button onClick={handleSaveLimits} variant="contained" color="primary">Save Limits</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Reset Password Dialog */}
+            <Dialog open={resetPasswordOpen} onClose={() => setResetPasswordOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>Reset Password - {selectedUser?.email}</DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Enter a new password for this user. This will immediately override their old password.
+                        </Typography>
+                        <TextField
+                            label="New Password"
+                            type="text"
+                            fullWidth
+                            autoFocus
+                            value={resetPasswordVal}
+                            onChange={e => setResetPasswordVal(e.target.value)}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
+                    <Button onClick={handleResetPassword} variant="contained" color="warning" disabled={!resetPasswordVal}>
+                        Reset Password
+                    </Button>
                 </DialogActions>
             </Dialog>
 
