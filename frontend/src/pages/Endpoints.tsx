@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { fetchApi } from '../api';
+import { useProject } from '../contexts/ProjectContext';
 import toast from 'react-hot-toast';
 import { Typography, Box, Paper, TextField, Button, Select, MenuItem, InputLabel, FormControl, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -15,13 +16,11 @@ interface Endpoint {
     auth_config?: string | null; 
     destinations: Destination[]; 
 }
-interface Project { id: string; name: string; my_role?: string; }
 
 export default function Endpoints() {
     const confirm = useConfirm();
 
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+    const { projects, selectedProjectId, setSelectedProjectId } = useProject();
     const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
     
     const [newEpName, setNewEpName] = useState('');
@@ -40,17 +39,12 @@ export default function Endpoints() {
 
     useEffect(() => {
         document.title = "Endpoints - Webhook Forwarder";
-        loadProjects();
     }, []);
+    
     useEffect(() => {
         if (selectedProjectId) loadEndpoints(selectedProjectId);
         else setEndpoints([]);
     }, [selectedProjectId]);
-
-    const loadProjects = async () => {
-        try { setProjects(await fetchApi('/api/projects')); }
-        catch (err) { console.error(err); }
-    };
 
     const loadEndpoints = async (projId: string) => {
         try { setEndpoints(await fetchApi(`/api/endpoints?project_id=${projId}`)); }

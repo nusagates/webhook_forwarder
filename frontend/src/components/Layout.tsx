@@ -34,6 +34,10 @@ import StorageIcon from '@mui/icons-material/Storage';
 import SpeedIcon from '@mui/icons-material/Speed';
 import GroupIcon from '@mui/icons-material/Group';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
+import { useProject } from '../contexts/ProjectContext';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 import { fetchApi } from '../api';
 import { useEffect } from 'react';
 
@@ -117,6 +121,7 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const { projects, selectedProjectId, setSelectedProjectId } = useProject();
 
   useEffect(() => {
     fetchApi('/api/auth/me').then(data => setUser(data)).catch(() => {});
@@ -226,7 +231,32 @@ export default function Layout() {
         </List>
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
-        <List sx={{ mt: 'auto', mb: 2 }}>
+                <List sx={{ mt: 'auto', mb: 2 }}>
+          {/* Project Switcher */}
+          {projects.length > 0 && (
+            <ListItem sx={{ display: 'block', px: 2, mb: 2 }}>
+                <FormControl fullWidth size="small" sx={{ opacity: open ? 1 : 0, transition: 'opacity 0.2s', display: open ? 'block' : 'none' }}>
+                    <InputLabel id="project-select-label">Active Project</InputLabel>
+                    <Select
+                        labelId="project-select-label"
+                        id="project-select"
+                        value={selectedProjectId}
+                        label="Active Project"
+                        onChange={(e) => setSelectedProjectId(e.target.value as string)}
+                    >
+                        {projects.map((p) => (
+                            <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                {!open && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <StorageIcon color="action" />
+                    </Box>
+                )}
+            </ListItem>
+          )}
+          <Divider sx={{ mb: 1 }} />
           {user && user.id === 1 && (
             <>
               <ListItem disablePadding sx={{ display: 'block' }}>

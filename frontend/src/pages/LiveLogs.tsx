@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '../api';
+import { useProject } from '../contexts/ProjectContext';
 import toast from 'react-hot-toast';
 import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Pagination } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
@@ -21,11 +22,9 @@ interface DeliveryLog {
     created_at: string;
 }
 interface Endpoint { id: number; name: string; slug: string; project_id: string; }
-interface Project { id: string; name: string; my_role?: string; }
 
 export default function LiveLogs() {
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+    const { projects, selectedProjectId, setSelectedProjectId } = useProject();
     const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
     const [selectedEndpointId, setSelectedEndpointId] = useState<string>('');
     const [logs, setLogs] = useState<DeliveryLog[]>([]);
@@ -54,9 +53,7 @@ export default function LiveLogs() {
         }
     };
 
-    useEffect(() => {
-        loadProjects();
-    }, []);
+
 
     useEffect(() => {
         const unreadCount = logs.filter(l => !l.is_read).length;
@@ -185,10 +182,7 @@ export default function LiveLogs() {
         }
     };
 
-    const loadProjects = async () => {
-        try { setProjects(await fetchApi('/api/projects')); }
-        catch (err) { console.error(err); }
-    };
+
 
     const loadEndpoints = async (projId: string) => {
         try { setEndpoints(await fetchApi(`/api/endpoints?project_id=${projId}`)); }
