@@ -920,7 +920,8 @@ def update_system_settings_api(settings: schemas.SystemSettingUpdate, current_us
     settings_dict = {
         "max_projects_per_user": str(settings.max_projects_per_user),
         "max_endpoints_per_project": str(settings.max_endpoints_per_project),
-        "max_logs_per_endpoint": str(settings.max_logs_per_endpoint)
+        "max_logs_per_endpoint": str(settings.max_logs_per_endpoint),
+        "max_destinations_per_endpoint": str(settings.max_destinations_per_endpoint)
     }
     
     for key, value in settings_dict.items():
@@ -966,6 +967,7 @@ def update_user_admin(user_id: int, user_update: schemas.UserAdminUpdate, curren
     db_user.limit_projects = user_update.limit_projects
     db_user.limit_endpoints = user_update.limit_endpoints
     db_user.limit_logs = user_update.limit_logs
+    db_user.limit_destinations = user_update.limit_destinations
     
     db.commit()
     db.refresh(db_user)

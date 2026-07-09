@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, TextField, Button, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, Paper, TextField, Button, CircularProgress, Alert, Divider } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
@@ -117,6 +117,22 @@ export default function SystemLimits() {
                             type="number"
                             name="max_logs_per_endpoint"
                             value={limits.max_logs_per_endpoint}
+                            onChange={handleChange}
+                        />
+                    </Box>
+
+                    <Divider />
+
+                    <Box>
+                        <Typography variant="h6" sx={{ mb: 1 }}>Destinations per Endpoint</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            The maximum number of forwarding destinations allowed per webhook endpoint.
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            type="number"
+                            name="max_destinations_per_endpoint"
+                            value={limits.max_destinations_per_endpoint}
                             onChange={handleChange}
                         />
                     </Box>

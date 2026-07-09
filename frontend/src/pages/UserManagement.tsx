@@ -23,7 +23,8 @@ export default function UserManagement() {
     const [limits, setLimits] = useState({
         limit_projects: '',
         limit_endpoints: '',
-        limit_logs: ''
+        limit_logs: '',
+        limit_destinations: ''
     });
 
     useEffect(() => {
@@ -52,7 +53,8 @@ export default function UserManagement() {
                     is_blocked: user.is_blocked,
                     limit_projects: user.limit_projects,
                     limit_endpoints: user.limit_endpoints,
-                    limit_logs: user.limit_logs
+                    limit_logs: user.limit_logs,
+                    limit_destinations: user.limit_destinations
                 })
             });
             toast.success('Admin status updated');
@@ -84,7 +86,8 @@ export default function UserManagement() {
                     block_reason: block ? reason : null,
                     limit_projects: user.limit_projects,
                     limit_endpoints: user.limit_endpoints,
-                    limit_logs: user.limit_logs
+                    limit_logs: user.limit_logs,
+                    limit_destinations: user.limit_destinations
                 })
             });
             toast.success(block ? 'User blocked' : 'User unblocked');
@@ -105,7 +108,8 @@ export default function UserManagement() {
         setLimits({
             limit_projects: user.limit_projects !== null ? user.limit_projects.toString() : '',
             limit_endpoints: user.limit_endpoints !== null ? user.limit_endpoints.toString() : '',
-            limit_logs: user.limit_logs !== null ? user.limit_logs.toString() : ''
+            limit_logs: user.limit_logs !== null ? user.limit_logs.toString() : '',
+            limit_destinations: user.limit_destinations !== null ? user.limit_destinations.toString() : ''
         });
         setEditOpen(true);
     };
@@ -122,6 +126,7 @@ export default function UserManagement() {
                     limit_projects: limits.limit_projects ? parseInt(limits.limit_projects) : null,
                     limit_endpoints: limits.limit_endpoints ? parseInt(limits.limit_endpoints) : null,
                     limit_logs: limits.limit_logs ? parseInt(limits.limit_logs) : null,
+                    limit_destinations: limits.limit_destinations ? parseInt(limits.limit_destinations) : null,
                 })
             });
             toast.success('Limits updated successfully', { id: tid });
@@ -233,6 +238,14 @@ export default function UserManagement() {
                             value={limits.limit_logs}
                             onChange={e => setLimits({ ...limits, limit_logs: e.target.value })}
                             placeholder="e.g. 1000 (or blank for global)"
+                        />
+                        <TextField
+                            label="Max Destinations per Endpoint"
+                            type="number"
+                            fullWidth
+                            value={limits.limit_destinations}
+                            onChange={e => setLimits({ ...limits, limit_destinations: e.target.value })}
+                            placeholder="e.g. 5 (or blank for global)"
                         />
                     </Box>
                 </DialogContent>
