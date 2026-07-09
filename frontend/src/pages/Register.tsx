@@ -2,13 +2,27 @@ import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
-import { Container, Box, Typography, TextField, Button, Paper, Link } from '@mui/material';
+import { Container, Box, Typography, TextField, Button, Paper, Link, LinearProgress } from '@mui/material';
 
 export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const calculateStrength = (pwd: string) => {
+        if (!pwd) return 0;
+        let score = 0;
+        if (pwd.length >= 8) score += 25;
+        if (/[a-z]/.test(pwd)) score += 25;
+        if (/[A-Z]/.test(pwd)) score += 25;
+        if (/[0-9!@#$%^&*]/.test(pwd)) score += 25;
+        return score;
+    };
+
+    const strength = calculateStrength(password);
+    const strengthColor = strength < 50 ? 'error' : strength < 75 ? 'warning' : 'success';
+    const strengthLabel = strength === 0 ? '' : strength < 50 ? 'Weak' : strength < 75 ? 'Fair' : strength < 100 ? 'Good' : 'Strong';
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -61,6 +75,15 @@ export default function Register() {
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                         />
+                        {password && (
+                            <Box sx={{ width: '100%', mt: 1, mb: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">Password Strength</Typography>
+                                    <Typography variant="caption" color={`${strengthColor}.main`}>{strengthLabel}</Typography>
+                                </Box>
+                                <LinearProgress variant="determinate" value={strength} color={strengthColor as any} />
+                            </Box>
+                        )}
                         <Button
                             type="submit"
                             fullWidth

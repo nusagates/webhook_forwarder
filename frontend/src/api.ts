@@ -24,7 +24,13 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'An error occurred');
+        let errorMessage = 'An error occurred';
+        if (typeof errorData.detail === 'string') {
+            errorMessage = errorData.detail;
+        } else if (Array.isArray(errorData.detail)) {
+            errorMessage = errorData.detail.map((e: any) => e.msg).join(', ');
+        }
+        throw new Error(errorMessage);
     }
     
     return response.json();
