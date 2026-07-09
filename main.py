@@ -717,6 +717,27 @@ def test_db_connection(config: DbConfig, current_user: User = Depends(auth.get_c
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Connection failed: {str(e)}")
 
+
+@app.post("/api/settings/db/verify")
+def verify_database_data(config: DbConfig, current_user: User = Depends(auth.get_current_user)):
+    check_super_admin(current_user)
+    try:
+        engine = create_engine(config.url)
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            tables = ['users', 'projects', 'project_members', 'endpoints', 'destinations', 'delivery_logs']
+            stats = []
+            for table in tables:
+                try:
+                    result = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+                    stats.append(f"{table}: {result} rows")
+                except Exception:
+                    stats.append(f"{table}: Table not found or inaccessible")
+                    
+        return {"status": "success", "message": "Target Database Row Counts:\n- " + "\n- ".join(stats)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Verification failed: {str(e)}")
+
 @app.post("/api/settings/db/create")
 def create_database(config: DbConfig, current_user: User = Depends(auth.get_current_user)):
     check_super_admin(current_user)

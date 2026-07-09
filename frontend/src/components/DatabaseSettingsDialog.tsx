@@ -57,6 +57,20 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
         return '';
     };
 
+    const handleVerify = async () => {
+        const url = buildConnectionString();
+        setConsoleOutput({ type: 'info', text: 'Verifying data on target database...' });
+        try {
+            const res = await fetchApi('/api/settings/db/verify', {
+                method: 'POST',
+                body: JSON.stringify({ url })
+            });
+            setConsoleOutput({ type: 'success', text: res.message });
+        } catch (e: any) {
+            setConsoleOutput({ type: 'error', text: e.message || 'Verification failed' });
+        }
+    };
+
     const handleTest = async () => {
         const url = buildConnectionString();
         setConsoleOutput({ type: 'info', text: 'Testing connection...' });
@@ -201,6 +215,7 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
             <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
                 <Box>
                     <Button onClick={handleTest} color="primary" variant="outlined" sx={{ mr: 1 }}>Test Connection</Button>
+                    {engine !== 'sqlite' && <Button onClick={handleVerify} color="info" variant="outlined" sx={{ mr: 1 }}>Verify Data</Button>}
                     {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined" sx={{ mr: 1 }}>Create DB</Button>}
                     <Button onClick={handleRestart} color="error" variant="outlined">Restart Service</Button>
                 </Box>
