@@ -114,6 +114,7 @@ class DeliveryLog(BaseModel):
     payload: str
     status_code: Optional[int] = None
     response_body: Optional[str] = None
+    is_read: bool = False
     created_at: datetime
     class Config:
         from_attributes = True

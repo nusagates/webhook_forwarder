@@ -80,6 +80,7 @@ class DeliveryLog(Base):
     status_code = Column(Integer, nullable=True)
     response_body = Column(Text, nullable=True)
     
+    is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     endpoint = relationship("Endpoint", back_populates="logs")

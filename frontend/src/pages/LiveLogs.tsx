@@ -6,6 +6,7 @@ import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClearIcon from '@mui/icons-material/Clear';
 import ReplayIcon from '@mui/icons-material/Replay';
+import ChecklistIcon from '@mui/icons-material/Checklist';
 
 interface DeliveryLog { 
     id: number;
@@ -16,6 +17,7 @@ interface DeliveryLog {
     query_params: string | null;
     payload: string;
     response_body: string | null;
+    is_read: boolean;
     created_at: string;
 }
 interface Endpoint { id: number; name: string; slug: string; project_id: string; }
@@ -34,9 +36,17 @@ export default function LiveLogs() {
     const wsRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        document.title = "Live Logs - Webhook Forwarder";
         loadProjects();
     }, []);
+
+    useEffect(() => {
+        const unreadCount = logs.filter(l => !l.is_read).length;
+        if (unreadCount > 0) {
+            document.title = `(${unreadCount}) Live Logs - Webhook Forwarder`;
+        } else {
+            document.title = "Live Logs - Webhook Forwarder";
+        }
+    }, [logs]);
     
     useEffect(() => {
         if (selectedProjectId) loadEndpoints(selectedProjectId);
@@ -95,6 +105,28 @@ export default function LiveLogs() {
             toast.success('Webhook resend triggered!');
         } catch (err: any) {
             toast.error(err.message || 'Failed to resend webhook');
+        }
+    };
+
+    const handleLogSelect = async (log: DeliveryLog) => {
+        setSelectedLogId(log.id);
+        if (!log.is_read) {
+            setLogs(prev => prev.map(l => l.id === log.id ? { ...l, is_read: true } : l));
+            try {
+                await fetchApi(`/api/logs/${log.id}/read`, { method: 'PUT' });
+            } catch (err) {
+                console.error('Failed to mark read', err);
+            }
+        }
+    };
+
+    const handleMarkAllRead = async () => {
+        if (!selectedEndpointId) return;
+        setLogs(prev => prev.map(l => ({ ...l, is_read: true })));
+        try {
+            await fetchApi(`/api/endpoints/${selectedEndpointId}/logs/read`, { method: 'PUT' });
+        } catch (err) {
+            console.error('Failed to mark all as read', err);
         }
     };
 
@@ -196,10 +228,15 @@ export default function LiveLogs() {
                     {/* LEFT SIDEBAR: Log List */}
                     <Box sx={{ width: '300px', borderRight: '1px solid #e0e0e0', overflowY: 'auto', bgcolor: '#f9f9f9' }}>
                         <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="subtitle2" color="text.secondary">INBOX ({logs.length}) Newest First</Typography>
-                            {!isViewer && logs.length > 0 && (
-                                <Button size="small" color="error" onClick={() => setClearDialogOpen(true)}>Clear All</Button>
-                            )}
+                            <Typography variant="subtitle2" color="text.secondary">INBOX ({logs.length})</Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {logs.some(l => !l.is_read) && (
+                                    <Button size="small" onClick={handleMarkAllRead} startIcon={<ChecklistIcon />}>Mark Read</Button>
+                                )}
+                                {!isViewer && logs.length > 0 && (
+                                    <Button size="small" color="error" onClick={() => setClearDialogOpen(true)}>Clear</Button>
+                                )}
+                            </Box>
                         </Box>
                         {logs.length === 0 ? (
                             <Typography color="text.secondary" sx={{ p: 3, fontStyle: 'italic', textAlign: 'center' }}>
@@ -209,26 +246,29 @@ export default function LiveLogs() {
                             logs.map(log => (
                                 <Box 
                                     key={log.id} 
-                                    onClick={() => setSelectedLogId(log.id)}
+                                    onClick={() => handleLogSelect(log)}
                                     sx={{ 
                                         p: 2, 
                                         borderBottom: '1px solid #e0e0e0', 
                                         cursor: 'pointer',
                                         position: 'relative',
-                                        bgcolor: selectedLogId === log.id ? '#3582c4' : 'transparent',
-                                        color: selectedLogId === log.id ? '#fff' : 'inherit',
-                                        '&:hover': { bgcolor: selectedLogId === log.id ? '#3582c4' : '#f1f1f1' },
+                                        bgcolor: selectedLogId === log.id ? '#e3f2fd' : (!log.is_read ? '#f0f7ff' : 'transparent'),
+                                        color: selectedLogId === log.id ? '#3582c4' : 'inherit',
+                                        '&:hover': { bgcolor: selectedLogId === log.id ? '#e3f2fd' : '#f5f5f5' },
                                         '& .delete-btn': { display: 'none' },
                                         '&:hover .delete-btn': { display: 'flex' }
                                     }}
                                 >
+                                    {!log.is_read && (
+                                        <Box sx={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, bgcolor: 'primary.main', borderRadius: '50%' }} />
+                                    )}
                                     <Box sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
                                         <Chip 
                                             label={log.http_method} 
                                             size="small" 
                                             sx={{ 
-                                                bgcolor: selectedLogId === log.id ? 'rgba(255,255,255,0.2)' : '#5bc0de',
-                                                color: '#fff',
+                                                bgcolor: selectedLogId === log.id ? 'rgba(53,130,196,0.2)' : '#5bc0de',
+                                                color: selectedLogId === log.id ? '#3582c4' : '#fff',
                                                 fontWeight: 'bold', height: '20px', fontSize: '0.7rem' 
                                             }} 
                                         />

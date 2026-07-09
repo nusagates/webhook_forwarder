@@ -425,6 +425,36 @@ def clear_logs(endpoint_id: int, current_user: models.User = Depends(auth.get_cu
     db.commit()
     return {"status": "success"}
 
+@app.put("/api/logs/{log_id}/read")
+def mark_log_read(log_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    log = db.query(models.DeliveryLog).filter(models.DeliveryLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+        
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == log.endpoint_id).first()
+    if endpoint:
+        project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+        if not project or role not in ["owner", "editor", "viewer"]:
+            raise HTTPException(status_code=403, detail="Not authorized")
+            
+    log.is_read = True
+    db.commit()
+    return {"status": "success"}
+
+@app.put("/api/endpoints/{endpoint_id}/logs/read")
+def mark_all_logs_read(endpoint_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
+    if not endpoint:
+        raise HTTPException(status_code=404, detail="Endpoint not found")
+        
+    project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
+    if not project or role not in ["owner", "editor", "viewer"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id, models.DeliveryLog.is_read == False).update({"is_read": True})
+    db.commit()
+    return {"status": "success"}
+
 @app.post("/api/logs/{log_id}/resend")
 async def resend_log(log_id: int, background_tasks: BackgroundTasks, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     log = db.query(models.DeliveryLog).filter(models.DeliveryLog.id == log_id).first()
