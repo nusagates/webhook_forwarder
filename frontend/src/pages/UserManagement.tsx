@@ -106,10 +106,10 @@ export default function UserManagement() {
     const openEditDialog = (user: any) => {
         setSelectedUser(user);
         setLimits({
-            limit_projects: user.limit_projects !== null ? user.limit_projects.toString() : '',
-            limit_endpoints: user.limit_endpoints !== null ? user.limit_endpoints.toString() : '',
-            limit_logs: user.limit_logs !== null ? user.limit_logs.toString() : '',
-            limit_destinations: user.limit_destinations !== null ? user.limit_destinations.toString() : ''
+            limit_projects: user.limit_projects != null ? user.limit_projects.toString() : '',
+            limit_endpoints: user.limit_endpoints != null ? user.limit_endpoints.toString() : '',
+            limit_logs: user.limit_logs != null ? user.limit_logs.toString() : '',
+            limit_destinations: user.limit_destinations != null ? user.limit_destinations.toString() : ''
         });
         setEditOpen(true);
     };
