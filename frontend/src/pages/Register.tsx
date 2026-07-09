@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
@@ -9,6 +9,10 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        document.title = "Register - Webhook Forwarder";
+    }, []);
 
     const calculateStrength = (pwd: string) => {
         if (!pwd) return 0;

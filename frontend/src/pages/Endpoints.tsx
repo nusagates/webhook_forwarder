@@ -32,7 +32,10 @@ export default function Endpoints() {
 
     const [editEndpoint, setEditEndpoint] = useState<Endpoint | null>(null);
 
-    useEffect(() => { loadProjects(); }, []);
+    useEffect(() => {
+        document.title = "Endpoints - Webhook Forwarder";
+        loadProjects();
+    }, []);
     useEffect(() => {
         if (selectedProjectId) loadEndpoints(selectedProjectId);
         else setEndpoints([]);

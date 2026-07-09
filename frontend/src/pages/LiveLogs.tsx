@@ -31,7 +31,10 @@ export default function LiveLogs() {
     
     const wsRef = useRef<WebSocket | null>(null);
 
-    useEffect(() => { loadProjects(); }, []);
+    useEffect(() => {
+        document.title = "Live Logs - Webhook Forwarder";
+        loadProjects();
+    }, []);
     
     useEffect(() => {
         if (selectedProjectId) loadEndpoints(selectedProjectId);

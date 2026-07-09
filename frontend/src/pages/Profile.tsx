@@ -26,6 +26,7 @@ export default function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    document.title = "Profile - Webhook Forwarder";
     const fetchUser = async () => {
       try {
         const user = await fetchApi('/api/auth/me');
