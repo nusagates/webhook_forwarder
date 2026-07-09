@@ -32,6 +32,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import StorageIcon from '@mui/icons-material/Storage';
 import SpeedIcon from '@mui/icons-material/Speed';
+import GroupIcon from '@mui/icons-material/Group';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { fetchApi } from '../api';
 import { useEffect } from 'react';
@@ -250,6 +251,12 @@ export default function Layout() {
                       <SpeedIcon fontSize="small" />
                     </ListItemIcon>
                     <ListItemText primary="Limits" sx={{ opacity: open ? 1 : 0 }} />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} selected={location.pathname === '/settings/users'} onClick={() => navigate('/settings/users')}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
+                      <GroupIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Users" sx={{ opacity: open ? 1 : 0 }} />
                   </ListItemButton>
                 </List>
               </Collapse>

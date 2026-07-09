@@ -12,6 +12,7 @@ import Endpoints from './pages/Endpoints';
 import LiveLogs from './pages/LiveLogs';
 import Profile from './pages/Profile';
 import SystemLimits from './pages/SystemLimits';
+import UserManagement from './pages/UserManagement';
 
 const theme = createTheme({
   palette: {
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="logs" element={<LiveLogs />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings/limits" element={<SystemLimits />} />
+              <Route path="settings/users" element={<UserManagement />} />
           </Route>
         </Routes>
       </BrowserRouter>

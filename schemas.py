@@ -131,3 +131,24 @@ class SystemSettingUpdate(BaseModel):
     max_projects_per_user: int
     max_endpoints_per_project: int
     max_logs_per_endpoint: int
+
+
+class UserOutAdmin(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str]
+    is_admin: bool
+    is_blocked: bool
+    limit_projects: Optional[int]
+    limit_endpoints: Optional[int]
+    limit_logs: Optional[int]
+    
+    class Config:
+        orm_mode = True
+
+class UserAdminUpdate(BaseModel):
+    is_admin: bool
+    is_blocked: bool
+    limit_projects: Optional[int] = None
+    limit_endpoints: Optional[int] = None
+    limit_logs: Optional[int] = None

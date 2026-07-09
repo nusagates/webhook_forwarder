@@ -11,6 +11,12 @@ class User(Base):
     full_name = Column(String, nullable=True)
     hashed_password = Column(String)
     
+    is_admin = Column(Boolean, default=False)
+    is_blocked = Column(Boolean, default=False)
+    limit_projects = Column(Integer, nullable=True)
+    limit_endpoints = Column(Integer, nullable=True)
+    limit_logs = Column(Integer, nullable=True)
+    
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 
 class Project(Base):
@@ -41,7 +47,9 @@ class Endpoint(Base):
     name = Column(String, index=True)
     slug = Column(String, index=True)
     project_id = Column(String, ForeignKey("projects.id"))
-
+    
+    is_active = Column(Boolean, default=True)
+    
     auth_type = Column(String, default="none")
     auth_config = Column(String, nullable=True) # JSON string
     
