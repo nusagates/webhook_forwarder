@@ -812,6 +812,22 @@ def migrate_database(config: DbConfig, current_user: User = Depends(auth.get_cur
         raise HTTPException(status_code=400, detail=f"Migration failed: {str(e)}")
 
 
+
+@app.post("/api/settings/restart")
+def restart_server(current_user: User = Depends(auth.get_current_user)):
+    check_super_admin(current_user)
+    import threading
+    import time
+    import os
+    import signal
+    
+    def kill_server():
+        time.sleep(2)
+        os.kill(os.getpid(), signal.SIGTERM)
+        
+    threading.Thread(target=kill_server).start()
+    return {"status": "success", "message": "Restarting server in 2 seconds..."}
+
 @app.get("/api/settings/system")
 def get_system_settings_api(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     check_super_admin(current_user)

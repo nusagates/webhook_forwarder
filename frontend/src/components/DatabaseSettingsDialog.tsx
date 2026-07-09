@@ -90,6 +90,21 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
         }
     };
 
+    
+    const handleRestart = async () => {
+        if (!await confirm({ message: "Are you sure you want to restart the backend service? Active webhooks might be dropped during the restart.", isDanger: true })) return;
+        
+        try {
+            const res = await fetchApi('/api/settings/restart', { method: 'POST' });
+            setConsoleOutput({ type: 'success', text: res.message + '\n\nThe application will reload automatically.' });
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        } catch (e: any) {
+            setConsoleOutput({ type: 'error', text: e.message || 'Failed to restart service' });
+        }
+    };
+
     const handleMigrate = async () => {
         if (!await confirm({ message: "Are you sure you want to migrate all data to the new database? This process may take a while depending on your log volume.", isDanger: true })) return;
         
@@ -170,7 +185,8 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
             <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
                 <Box>
                     <Button onClick={handleTest} color="primary" variant="outlined" sx={{ mr: 1 }}>Test Connection</Button>
-                    {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined">Create DB</Button>}
+                    {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined" sx={{ mr: 1 }}>Create DB</Button>}
+                    <Button onClick={handleRestart} color="error" variant="outlined">Restart Service</Button>
                 </Box>
                 <Box>
                     <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>
