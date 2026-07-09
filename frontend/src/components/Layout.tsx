@@ -108,7 +108,7 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    fetchApi('/api/users/me').then(data => setUser(data)).catch(() => {});
+    fetchApi('/api/auth/me').then(data => setUser(data)).catch(() => {});
   }, []);
 
   const navigate = useNavigate();
