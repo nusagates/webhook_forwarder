@@ -9,7 +9,8 @@ export default function SystemLimits() {
     const [limits, setLimits] = useState({
         max_projects_per_user: 5,
         max_endpoints_per_project: 10,
-        max_logs_per_endpoint: 1000
+        max_logs_per_endpoint: 1000,
+        max_destinations_per_endpoint: 5
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

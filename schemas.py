@@ -154,3 +154,4 @@ class UserAdminUpdate(BaseModel):
     limit_projects: Optional[int] = None
     limit_endpoints: Optional[int] = None
     limit_logs: Optional[int] = None
+    limit_destinations: Optional[int] = None

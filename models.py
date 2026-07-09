@@ -17,6 +17,7 @@ class User(Base):
     limit_projects = Column(Integer, nullable=True)
     limit_endpoints = Column(Integer, nullable=True)
     limit_logs = Column(Integer, nullable=True)
+    limit_destinations = Column(Integer, nullable=True)
     
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
 

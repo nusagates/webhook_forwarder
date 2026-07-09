@@ -909,7 +909,8 @@ def get_system_settings_api(current_user: models.User = Depends(auth.get_current
     return {
         "max_projects_per_user": int(get_system_setting(db, "max_projects_per_user", "5")),
         "max_endpoints_per_project": int(get_system_setting(db, "max_endpoints_per_project", "10")),
-        "max_logs_per_endpoint": int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
+        "max_logs_per_endpoint": int(get_system_setting(db, "max_logs_per_endpoint", "1000")),
+        "max_destinations_per_endpoint": int(get_system_setting(db, "max_destinations_per_endpoint", "5"))
     }
 
 @app.put("/api/settings/system")

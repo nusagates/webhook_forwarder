@@ -24,6 +24,18 @@ if is_sqlite:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+try:
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN limit_destinations INT NULL"))
+            conn.commit()
+        except:
+            pass
+except:
+    pass
+
 Base = declarative_base()
 
 def get_db():
