@@ -105,6 +105,22 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
         }
     };
 
+    const handleSwitch = async () => {
+        if (!await confirm({ message: "Are you sure you want to switch the database? (This does NOT copy data, it only points the app to the new database).", isDanger: true })) return;
+        
+        const url = buildConnectionString();
+        setConsoleOutput({ type: 'info', text: 'Switching database...' });
+        try {
+            const res = await fetchApi('/api/settings/db/switch', {
+                method: 'POST',
+                body: JSON.stringify({ url })
+            });
+            setConsoleOutput({ type: 'success', text: res.message + '\n\nPlease click Restart Service to apply changes.' });
+        } catch (e: any) {
+            setConsoleOutput({ type: 'error', text: e.message || 'Switch failed' });
+        }
+    };
+
     const handleMigrate = async () => {
         if (!await confirm({ message: "Are you sure you want to migrate all data to the new database? This process may take a while depending on your log volume.", isDanger: true })) return;
         
@@ -190,7 +206,8 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
                 </Box>
                 <Box>
                     <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>
-                    <Button onClick={handleMigrate} variant="contained" color="warning">Migrate & Save</Button>
+                    {engine !== 'sqlite' && <Button onClick={handleSwitch} variant="outlined" color="primary" sx={{ mr: 1 }}>Save & Switch DB</Button>}
+                    <Button onClick={handleMigrate} variant="contained" color="warning">Migrate Data</Button>
                 </Box>
             </DialogActions>
         </Dialog>

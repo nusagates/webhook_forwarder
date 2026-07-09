@@ -742,6 +742,35 @@ def create_database(config: DbConfig, current_user: User = Depends(auth.get_curr
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create database: {str(e)}")
 
+
+@app.post("/api/settings/db/switch")
+def switch_database(config: DbConfig, current_user: User = Depends(auth.get_current_user)):
+    check_super_admin(current_user)
+    try:
+        # Write to .env
+        env_file = ".env"
+        env_lines = []
+        if os.path.exists(env_file):
+            with open(env_file, "r") as f:
+                env_lines = f.readlines()
+                
+        found = False
+        for i, line in enumerate(env_lines):
+            if line.startswith("SQLALCHEMY_DATABASE_URL="):
+                env_lines[i] = f"SQLALCHEMY_DATABASE_URL={config.url}\n"
+                found = True
+                break
+        
+        if not found:
+            env_lines.append(f"\nSQLALCHEMY_DATABASE_URL={config.url}\n")
+            
+        with open(env_file, "w") as f:
+            f.writelines(env_lines)
+            
+        return {"status": "success", "message": "Database switched successfully! Click Restart Service to apply."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Switch failed: {str(e)}")
+
 @app.post("/api/settings/db/migrate")
 def migrate_database(config: DbConfig, current_user: User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     check_super_admin(current_user)
