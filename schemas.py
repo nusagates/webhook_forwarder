@@ -125,3 +125,9 @@ class PaginatedLogs(BaseModel):
     page: int
     pages: int
     limit: int
+
+
+class SystemSettingUpdate(BaseModel):
+    max_projects_per_user: int
+    max_endpoints_per_project: int
+    max_logs_per_endpoint: int

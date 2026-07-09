@@ -85,3 +85,10 @@ class DeliveryLog(Base):
 
     endpoint = relationship("Endpoint", back_populates="logs")
     destination = relationship("Destination", back_populates="logs")
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String)

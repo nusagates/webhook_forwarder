@@ -4,6 +4,13 @@ from sqlalchemy.orm import Session
 import models
 from ws_manager import manager
 
+def get_system_setting(db: Session, key: str, default: str):
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+    if setting:
+        return setting.value
+    return default
+
+
 async def forward_webhook(endpoint_id: int, payload: str, destinations: list[models.Destination], req_meta: dict):
     # Note: normally we might run DB operations synchronously here, 
     # but since it's a background task in FastAPI, we should use a fresh DB session
@@ -110,6 +117,25 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
         db.add(log_entry)
         db.commit()
         db.refresh(log_entry)
+        
+        # Enforce log limits
+        try:
+            max_logs = int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
+            log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).count()
+            if log_count > max_logs:
+                # Find IDs of oldest logs to delete
+                logs_to_delete = log_count - max_logs
+                oldest_logs = db.query(models.DeliveryLog.id).filter(
+                    models.DeliveryLog.endpoint_id == endpoint_id
+                ).order_by(models.DeliveryLog.created_at.asc()).limit(logs_to_delete).all()
+                
+                if oldest_logs:
+                    old_ids = [log[0] for log in oldest_logs]
+                    db.query(models.DeliveryLog).filter(models.DeliveryLog.id.in_(old_ids)).delete(synchronize_session=False)
+                    db.commit()
+        except Exception as e:
+            print(f"Error enforcing log limits: {e}")
+            db.rollback()
         
         log_dict['id'] = log_entry.id
         await manager.broadcast_to_endpoint(endpoint_id, log_dict)

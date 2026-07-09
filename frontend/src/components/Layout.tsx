@@ -20,10 +20,18 @@ import ListItemText from '@mui/material/ListItemText';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import LogoutIcon from '@mui/icons-material/Logout';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+
+
 
 import SettingsIcon from '@mui/icons-material/Settings';
+import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Collapse from '@mui/material/Collapse';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import StorageIcon from '@mui/icons-material/Storage';
+import SpeedIcon from '@mui/icons-material/Speed';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { fetchApi } from '../api';
 import { useEffect } from 'react';
@@ -106,6 +114,8 @@ export default function Layout() {
 
   const [user, setUser] = useState<any>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchApi('/api/auth/me').then(data => setUser(data)).catch(() => {});
@@ -126,7 +136,7 @@ export default function Layout() {
     { text: 'Projects', icon: <DashboardIcon />, path: '/projects' },
     { text: 'Endpoints', icon: <ListAltIcon />, path: '/endpoints' },
     { text: 'Live Logs', icon: <TimelineIcon />, path: '/logs' },
-    { text: 'Profile', icon: <AccountCircleIcon />, path: '/profile' },
+    
   ];
 
   return (
@@ -149,10 +159,29 @@ export default function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, color: theme.palette.primary.main, flexGrow: 1 }}>
             Webhook Forwarder
           </Typography>
-          {user && user.id === 1 && (
-            <IconButton color="primary" onClick={() => setSettingsOpen(true)}>
-              <SettingsIcon />
-            </IconButton>
+          {user && (
+            <>
+              <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0, ml: 2 }}>
+                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{user.full_name ? user.full_name[0].toUpperCase() : user.email[0].toUpperCase()}</Avatar>
+              </IconButton>
+              <Menu
+                sx={{ mt: '45px' }}
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                keepMounted
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                open={Boolean(anchorEl)}
+                onClose={() => setAnchorEl(null)}
+              >
+                <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>
+                  <Typography align="center">Profile</Typography>
+                </MenuItem>
+                <MenuItem onClick={() => { setAnchorEl(null); handleLogout(); }}>
+                  <Typography align="center" color="error">Logout</Typography>
+                </MenuItem>
+              </Menu>
+            </>
           )}
 
         </Toolbar>
@@ -196,18 +225,36 @@ export default function Layout() {
         </List>
         <Box sx={{ flexGrow: 1 }} />
         <Divider />
-        <List>
-          <ListItem disablePadding sx={{ display: 'block' }}>
-            <ListItemButton
-              sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}
-              onClick={handleLogout}
-            >
-              <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center', color: '#d32f2f' }}>
-                <LogoutIcon />
-              </ListItemIcon>
-              <ListItemText primary="Logout" sx={{ opacity: open ? 1 : 0, color: '#d32f2f' }} />
-            </ListItemButton>
-          </ListItem>
+        <List sx={{ mt: 'auto', mb: 2 }}>
+          {user && user.id === 1 && (
+            <>
+              <ListItem disablePadding sx={{ display: 'block' }}>
+                <ListItemButton onClick={() => setSettingsMenuOpen(!settingsMenuOpen)} sx={{ minHeight: 48, justifyContent: open ? 'initial' : 'center', px: 2.5 }}>
+                  <ListItemIcon sx={{ minWidth: 0, mr: open ? 3 : 'auto', justifyContent: 'center' }}>
+                    <SettingsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Settings" sx={{ opacity: open ? 1 : 0 }} />
+                  {open ? (settingsMenuOpen ? <ExpandLess /> : <ExpandMore />) : null}
+                </ListItemButton>
+              </ListItem>
+              <Collapse in={settingsMenuOpen && open} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} onClick={() => setSettingsOpen(true)}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
+                      <StorageIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Database" sx={{ opacity: open ? 1 : 0 }} />
+                  </ListItemButton>
+                  <ListItemButton sx={{ pl: open ? 4 : 2, justifyContent: open ? 'initial' : 'center' }} selected={location.pathname === '/settings/limits'} onClick={() => navigate('/settings/limits')}>
+                    <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto' }}>
+                      <SpeedIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Limits" sx={{ opacity: open ? 1 : 0 }} />
+                  </ListItemButton>
+                </List>
+              </Collapse>
+            </>
+          )}
         </List>
       </Drawer>
       <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>

@@ -810,3 +810,34 @@ def migrate_database(config: DbConfig, current_user: User = Depends(auth.get_cur
         return {"status": "success", "message": "Migration completed successfully. Please restart the backend service."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Migration failed: {str(e)}")
+
+
+@app.get("/api/settings/system")
+def get_system_settings_api(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    check_super_admin(current_user)
+    return {
+        "max_projects_per_user": int(get_system_setting(db, "max_projects_per_user", "5")),
+        "max_endpoints_per_project": int(get_system_setting(db, "max_endpoints_per_project", "10")),
+        "max_logs_per_endpoint": int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
+    }
+
+@app.put("/api/settings/system")
+def update_system_settings_api(settings: schemas.SystemSettingUpdate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    check_super_admin(current_user)
+    
+    settings_dict = {
+        "max_projects_per_user": str(settings.max_projects_per_user),
+        "max_endpoints_per_project": str(settings.max_endpoints_per_project),
+        "max_logs_per_endpoint": str(settings.max_logs_per_endpoint)
+    }
+    
+    for key, value in settings_dict.items():
+        db_setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == key).first()
+        if db_setting:
+            db_setting.value = value
+        else:
+            db_setting = models.SystemSetting(key=key, value=value)
+            db.add(db_setting)
+            
+    db.commit()
+    return {"status": "success"}
