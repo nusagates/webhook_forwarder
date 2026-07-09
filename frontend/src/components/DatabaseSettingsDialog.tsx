@@ -10,6 +10,10 @@ interface DatabaseSettingsDialogProps {
 }
 
 export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettingsDialogProps) {
+    const handleClose = () => {
+        setConsoleOutput(null);
+        onClose();
+    };
     const confirm = useConfirm();
 
     const [engine, setEngine] = useState('sqlite');
@@ -21,6 +25,7 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
     
     const [currentUrl, setCurrentUrl] = useState('');
     const [currentEngine, setCurrentEngine] = useState('');
+    const [consoleOutput, setConsoleOutput] = useState<{ type: 'info' | 'success' | 'error', text: string } | null>(null);
 
     useEffect(() => {
         if (open) {
@@ -54,34 +59,34 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
 
     const handleTest = async () => {
         const url = buildConnectionString();
-        const tid = toast.loading('Testing connection...');
+        setConsoleOutput({ type: 'info', text: 'Testing connection...' });
         try {
             await fetchApi('/api/settings/db/test', {
                 method: 'POST',
                 body: JSON.stringify({ url })
             });
-            toast.success('Connection successful!', { id: tid });
+            setConsoleOutput({ type: 'success', text: 'Connection successful! Database is reachable.' });
         } catch (e: any) {
-            toast.error(e.message || 'Connection failed', { id: tid });
+            setConsoleOutput({ type: 'error', text: e.message || 'Connection failed' });
         }
     };
 
     const handleCreate = async () => {
         const url = buildConnectionString();
         if (engine === 'sqlite') {
-            toast.success("SQLite database is created automatically.");
+            setConsoleOutput({ type: 'info', text: 'SQLite database is created automatically.' });
             return;
         }
         
-        const tid = toast.loading('Creating database...');
+        setConsoleOutput({ type: 'info', text: 'Creating database...' });
         try {
             const res = await fetchApi('/api/settings/db/create', {
                 method: 'POST',
                 body: JSON.stringify({ url })
             });
-            toast.success(res.message, { id: tid });
+            setConsoleOutput({ type: 'success', text: res.message });
         } catch (e: any) {
-            toast.error(e.message || 'Failed to create database', { id: tid });
+            setConsoleOutput({ type: 'error', text: e.message || 'Failed to create database' });
         }
     };
 
@@ -89,21 +94,20 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
         if (!await confirm({ message: "Are you sure you want to migrate all data to the new database? This process may take a while depending on your log volume.", isDanger: true })) return;
         
         const url = buildConnectionString();
-        const tid = toast.loading('Migrating database...');
+        setConsoleOutput({ type: 'info', text: 'Migrating database... Please wait, this might take a while.' });
         try {
             const res = await fetchApi('/api/settings/db/migrate', {
                 method: 'POST',
                 body: JSON.stringify({ url })
             });
-            toast.success(res.message, { id: tid, duration: 8000 });
-            onClose();
+            setConsoleOutput({ type: 'success', text: res.message + '\n\nMigration completed successfully. You can close this dialog.' });
         } catch (e: any) {
-            toast.error(e.message || 'Migration failed', { id: tid, duration: 5000 });
+            setConsoleOutput({ type: 'error', text: e.message || 'Migration failed' });
         }
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
             <DialogTitle>Database Settings & Migration</DialogTitle>
             <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Alert severity="info" sx={{ mb: 1 }}>
@@ -134,6 +138,34 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
                         <TextField size="small" label="Database Name" value={dbName} onChange={e => setDbName(e.target.value)} fullWidth />
                     </>
                 )}
+
+                {consoleOutput && (
+                    <Box sx={{ 
+                        mt: 2, 
+                        p: 2, 
+                        bgcolor: '#1e1e1e', 
+                        color: consoleOutput.type === 'error' ? '#ff6b6b' : consoleOutput.type === 'success' ? '#69db7c' : '#4dabf7', 
+                        borderRadius: 1,
+                        fontFamily: 'monospace',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-all',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        position: 'relative'
+                    }}>
+                        <Button 
+                            size="small" 
+                            sx={{ position: 'absolute', top: 5, right: 5, color: '#fff' }}
+                            onClick={() => {
+                                navigator.clipboard.writeText(consoleOutput.text);
+                                toast.success('Copied to clipboard');
+                            }}
+                        >
+                            Copy
+                        </Button>
+                        {consoleOutput.text}
+                    </Box>
+                )}
             </DialogContent>
             <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
                 <Box>
@@ -141,7 +173,7 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
                     {engine !== 'sqlite' && <Button onClick={handleCreate} color="secondary" variant="outlined">Create DB</Button>}
                 </Box>
                 <Box>
-                    <Button onClick={onClose} sx={{ mr: 1 }}>Cancel</Button>
+                    <Button onClick={handleClose} sx={{ mr: 1 }}>Cancel</Button>
                     <Button onClick={handleMigrate} variant="contained" color="warning">Migrate & Save</Button>
                 </Box>
             </DialogActions>
