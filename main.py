@@ -139,7 +139,11 @@ def get_mailersend_domain(token: str) -> str:
     try:
         req = urllib.request.Request(
             "https://api.mailersend.com/v1/domains",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
         )
         with urllib.request.urlopen(req, timeout=5) as response:
             res = json.loads(response.read().decode())
@@ -172,7 +176,8 @@ def send_reset_email(email: str, token: str, reset_link: str):
             headers={
                 "Authorization": f"Bearer {api_token}",
                 "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             },
             method="POST"
         )
