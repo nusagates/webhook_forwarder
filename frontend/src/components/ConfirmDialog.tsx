@@ -46,16 +46,16 @@ export const ConfirmProvider = ({ children }: { children: ReactNode }) => {
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
       <Dialog open={open} onClose={() => handleClose(false)}>
-        <DialogTitle>{options.title || 'Konfirmasi'}</DialogTitle>
+        <DialogTitle>{options.title || 'Confirm'}</DialogTitle>
         <DialogContent>
           <DialogContentText>{options.message}</DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => handleClose(false)} color="inherit">
-            {options.cancelText || 'Batal'}
+            {options.cancelText || 'Cancel'}
           </Button>
           <Button onClick={() => handleClose(true)} color={options.isDanger ? "error" : "primary"} variant="contained">
-            {options.confirmText || 'Ya, Lanjutkan'}
+            {options.confirmText || 'Yes, Continue'}
           </Button>
         </DialogActions>
       </Dialog>
