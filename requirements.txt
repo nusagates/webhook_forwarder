@@ -8,3 +8,7 @@ websockets
 httpx
 python-multipart
 email-validator
+
+python-dotenv
+psycopg2-binary
+pymysql

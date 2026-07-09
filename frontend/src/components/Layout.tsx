@@ -23,6 +23,12 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
+import SettingsIcon from '@mui/icons-material/Settings';
+import DatabaseSettingsDialog from './DatabaseSettingsDialog';
+import { fetchApi } from '../api';
+import { useEffect } from 'react';
+
+
 const drawerWidth = 240;
 
 const openedMixin = (theme: Theme) => ({
@@ -97,6 +103,14 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 export default function Layout() {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+
+  const [user, setUser] = useState<any>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    fetchApi('/api/users/me').then(data => setUser(data)).catch(() => {});
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -131,9 +145,16 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
+
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, color: theme.palette.primary.main, flexGrow: 1 }}>
             Webhook Forwarder
           </Typography>
+          {user && user.id === 1 && (
+            <IconButton color="primary" onClick={() => setSettingsOpen(true)}>
+              <SettingsIcon />
+            </IconButton>
+          )}
+
         </Toolbar>
       </AppBar>
       <Drawer variant="permanent" open={open}>
@@ -192,7 +213,10 @@ export default function Layout() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
         <DrawerHeader />
         <Outlet />
+
       </Box>
+      <DatabaseSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   );
 }
+
