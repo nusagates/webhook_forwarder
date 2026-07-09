@@ -460,6 +460,13 @@ async def websocket_endpoint(websocket: WebSocket, endpoint_id: int):
 
 # --- Project Member Routes ---
 
+@app.get("/api/projects/{project_id}/members", response_model=List[schemas.ProjectMember])
+def get_project_members(project_id: str, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    project, role = get_project_with_role(db, project_id, current_user.id)
+    if not project or role not in ["owner", "editor", "viewer"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view this project")
+    return db.query(models.ProjectMember).filter(models.ProjectMember.project_id == project_id).all()
+
 @app.post("/api/projects/{project_id}/members", response_model=schemas.ProjectMember)
 def add_project_member(project_id: str, member_in: schemas.ProjectMemberCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
     project, role = get_project_with_role(db, project_id, current_user.id)
