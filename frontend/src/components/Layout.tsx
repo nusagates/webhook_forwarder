@@ -35,9 +35,6 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import GroupIcon from '@mui/icons-material/Group';
 import DatabaseSettingsDialog from './DatabaseSettingsDialog';
 import { useProject } from '../contexts/ProjectContext';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import { fetchApi } from '../api';
 import { useEffect } from 'react';
 
@@ -121,6 +118,7 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const [projectAnchorEl, setProjectAnchorEl] = useState<null | HTMLElement>(null);
   const { projects, selectedProjectId, setSelectedProjectId } = useProject();
 
   useEffect(() => {
@@ -235,25 +233,52 @@ export default function Layout() {
           {/* Project Switcher */}
           {projects.length > 0 && (
             <ListItem sx={{ display: 'block', px: 2, mb: 2 }}>
-                <FormControl fullWidth size="small" sx={{ opacity: open ? 1 : 0, transition: 'opacity 0.2s', display: open ? 'block' : 'none' }}>
-                    <InputLabel id="project-select-label">Active Project</InputLabel>
-                    <Select
-                        labelId="project-select-label"
-                        id="project-select"
-                        value={selectedProjectId}
-                        label="Active Project"
-                        onChange={(e) => setSelectedProjectId(e.target.value as string)}
-                    >
-                        {projects.map((p) => (
-                            <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-                {!open && (
-                    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <ListItemButton 
+                    onClick={(e) => setProjectAnchorEl(e.currentTarget)}
+                    sx={{ 
+                        borderRadius: 1, 
+                        border: open ? '1px solid #e0e0e0' : 'none',
+                        justifyContent: open ? 'space-between' : 'center',
+                        px: open ? 2 : 1,
+                        py: 1
+                    }}
+                >
+                    {open ? (
+                        <>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>Active Project</Typography>
+                                <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
+                                    {projects.find(p => p.id === selectedProjectId)?.name || 'Select Project'}
+                                </Typography>
+                            </Box>
+                            <ExpandMore color="action" />
+                        </>
+                    ) : (
                         <StorageIcon color="action" />
-                    </Box>
-                )}
+                    )}
+                </ListItemButton>
+                
+                <Menu
+                    anchorEl={projectAnchorEl}
+                    open={Boolean(projectAnchorEl)}
+                    onClose={() => setProjectAnchorEl(null)}
+                    sx={{ '& .MuiPaper-root': { width: 220, maxHeight: 300 } }}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                    transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                    {projects.map((p) => (
+                        <MenuItem 
+                            key={p.id} 
+                            selected={p.id === selectedProjectId}
+                            onClick={() => {
+                                setSelectedProjectId(p.id);
+                                setProjectAnchorEl(null);
+                            }}
+                        >
+                            <Typography noWrap>{p.name}</Typography>
+                        </MenuItem>
+                    ))}
+                </Menu>
             </ListItem>
           )}
           <Divider sx={{ mb: 1 }} />
