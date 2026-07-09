@@ -427,8 +427,15 @@ def delete_endpoint(endpoint_id: int, current_user: models.User = Depends(auth.g
     db.commit()
     return {"status": "success"}
 
-@app.get("/api/logs", response_model=List[schemas.DeliveryLog])
-def get_logs(endpoint_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+@app.get("/api/logs", response_model=schemas.PaginatedLogs)
+def get_logs(
+    endpoint_id: int, 
+    page: int = 1, 
+    limit: int = 20, 
+    sort: str = "desc", 
+    current_user: models.User = Depends(auth.get_current_user), 
+    db: Session = Depends(get_db)
+):
     endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(status_code=404, detail="Endpoint not found")
@@ -436,7 +443,28 @@ def get_logs(endpoint_id: int, current_user: models.User = Depends(auth.get_curr
     project, role = get_project_with_role(db, endpoint.project_id, current_user.id)
     if not project:
         raise HTTPException(status_code=403, detail="Not authorized to view this project")
-    return db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).order_by(models.DeliveryLog.created_at.desc()).limit(100).all()
+        
+    query = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id)
+    
+    total = query.count()
+    
+    if sort == "asc":
+        query = query.order_by(models.DeliveryLog.created_at.asc())
+    else:
+        query = query.order_by(models.DeliveryLog.created_at.desc())
+        
+    items = query.offset((page - 1) * limit).limit(limit).all()
+    
+    import math
+    pages = math.ceil(total / limit) if total > 0 else 1
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "pages": pages,
+        "limit": limit
+    }
 
 @app.delete("/api/logs/{log_id}")
 def delete_log(log_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
-import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { Typography, Box, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, FormControlLabel, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Pagination } from '@mui/material';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -33,7 +33,26 @@ export default function LiveLogs() {
     const [formatJson, setFormatJson] = useState(true);
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
     
+    // Pagination & Sorting State
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalLogs, setTotalLogs] = useState(0);
+    const [sortBy, setSortBy] = useState('desc');
+    const limit = 20;
+
     const wsRef = useRef<WebSocket | null>(null);
+
+    const loadLogs = async (epId: number, currentPage = 1, currentSort = 'desc') => {
+        try {
+            const res = await fetchApi(`/api/logs?endpoint_id=${epId}&page=${currentPage}&limit=${limit}&sort=${currentSort}`);
+            setLogs(res.items);
+            setTotalPages(res.pages);
+            setTotalLogs(res.total);
+            setPage(currentPage);
+        } catch (err) {
+            console.error('Failed to load logs', err);
+        }
+    };
 
     useEffect(() => {
         loadProjects();
@@ -54,18 +73,15 @@ export default function LiveLogs() {
     }, [selectedProjectId]);
 
     useEffect(() => {
-        if (!selectedEndpointId) {
+        if (selectedEndpointId) {
+            loadLogs(selectedEndpointId as unknown as number, 1, sortBy);
+        } else {
             setLogs([]);
+            setTotalPages(1);
+            setTotalLogs(0);
             if (wsRef.current) wsRef.current.close();
             return;
         }
-        
-        fetchApi(`/api/logs?endpoint_id=${selectedEndpointId}`)
-            .then(data => {
-                setLogs(data);
-                if (data.length > 0) setSelectedLogId(data[0].id);
-            })
-            .catch(() => toast.error('Failed to load history logs'));
 
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/api/ws/logs/${selectedEndpointId}`;
@@ -74,13 +90,25 @@ export default function LiveLogs() {
 
         ws.onopen = () => toast.success('Connected to Live Stream');
         ws.onmessage = (event) => {
-            const newLog = JSON.parse(event.data);
-            newLog.created_at = new Date().toISOString(); 
-            setLogs(prev => {
-                // Deduplicate by ID to prevent double hits from StrictMode or race conditions
-                if (prev.some(l => l.id === newLog.id)) return prev;
-                return [newLog, ...prev];
-            });
+            try {
+                const newLog = JSON.parse(event.data);
+                newLog.is_read = false;
+                
+                setLogs(prev => {
+                    if (page === 1 && sortBy === 'desc') {
+                        const updated = [newLog, ...prev];
+                        if (updated.length > limit) updated.pop();
+                        return updated;
+                    }
+                    return prev;
+                });
+                
+                if (page === 1 && sortBy === 'desc') {
+                    setTotalLogs(prev => prev + 1);
+                }
+            } catch (e) {
+                console.error("Error parsing websocket message", e);
+            }
         };
         ws.onerror = () => toast.error('WebSocket connection error');
         ws.onclose = () => console.log('WebSocket closed');
@@ -96,6 +124,20 @@ export default function LiveLogs() {
             if (selectedLogId === id) setSelectedLogId(null);
         } catch (err: any) {
             toast.error(err.message || 'Failed to delete log');
+        }
+    };
+
+    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+        if (selectedEndpointId) {
+            loadLogs(selectedEndpointId as unknown as number, value, sortBy);
+        }
+    };
+
+    const handleSortChange = (event: any) => {
+        const newSort = event.target.value;
+        setSortBy(newSort);
+        if (selectedEndpointId) {
+            loadLogs(selectedEndpointId as unknown as number, 1, newSort);
         }
     };
 
@@ -226,24 +268,34 @@ export default function LiveLogs() {
             ) : (
                 <Box sx={{ flex: 1, display: 'flex', borderTop: '1px solid #e0e0e0', overflow: 'hidden' }}>
                     {/* LEFT SIDEBAR: Log List */}
-                    <Box sx={{ width: '300px', borderRight: '1px solid #e0e0e0', overflowY: 'auto', bgcolor: '#f9f9f9' }}>
-                        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="subtitle2" color="text.secondary">INBOX ({logs.length})</Typography>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                {logs.some(l => !l.is_read) && (
-                                    <Button size="small" onClick={handleMarkAllRead} startIcon={<ChecklistIcon />}>Mark Read</Button>
-                                )}
-                                {!isViewer && logs.length > 0 && (
-                                    <Button size="small" color="error" onClick={() => setClearDialogOpen(true)}>Clear</Button>
-                                )}
+                    <Box sx={{ width: '320px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', bgcolor: '#f9f9f9' }}>
+                        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0', bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography variant="subtitle2" color="text.secondary">INBOX ({totalLogs})</Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    {logs.some(l => !l.is_read) && (
+                                        <Button size="small" onClick={handleMarkAllRead} startIcon={<ChecklistIcon />}>Mark Read</Button>
+                                    )}
+                                    {!isViewer && logs.length > 0 && (
+                                        <Button size="small" color="error" onClick={() => setClearDialogOpen(true)}>Clear</Button>
+                                    )}
+                                </Box>
                             </Box>
+                            <FormControl size="small" fullWidth sx={{ mt: 1 }}>
+                                <Select value={sortBy} onChange={handleSortChange}>
+                                    <MenuItem value="desc">Newest First</MenuItem>
+                                    <MenuItem value="asc">Oldest First</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Box>
-                        {logs.length === 0 ? (
-                            <Typography color="text.secondary" sx={{ p: 3, fontStyle: 'italic', textAlign: 'center' }}>
-                                Waiting for webhooks...
-                            </Typography>
-                        ) : (
-                            logs.map(log => (
+                        
+                        <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                            {logs.length === 0 ? (
+                                <Typography color="text.secondary" sx={{ p: 3, fontStyle: 'italic', textAlign: 'center' }}>
+                                    Waiting for webhooks...
+                                </Typography>
+                            ) : (
+                                logs.map(log => (
                                 <Box 
                                     key={log.id} 
                                     onClick={() => handleLogSelect(log)}
@@ -305,6 +357,20 @@ export default function LiveLogs() {
                                     )}
                                 </Box>
                             ))
+                        )}
+                        </Box>
+                        
+                        {totalPages > 1 && (
+                            <Box sx={{ p: 1, borderTop: '1px solid #e0e0e0', bgcolor: '#fff', display: 'flex', justifyContent: 'center' }}>
+                                <Pagination 
+                                    count={totalPages} 
+                                    page={page} 
+                                    onChange={handlePageChange} 
+                                    size="small" 
+                                    siblingCount={0}
+                                    boundaryCount={1}
+                                />
+                            </Box>
                         )}
                     </Box>
 
