@@ -1,3 +1,4 @@
+import { useConfirm } from './ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem, Box, Alert } from '@mui/material';
 import { fetchApi } from '../api';
@@ -9,6 +10,8 @@ interface DatabaseSettingsDialogProps {
 }
 
 export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettingsDialogProps) {
+    const confirm = useConfirm();
+
     const [engine, setEngine] = useState('sqlite');
     const [host, setHost] = useState('localhost');
     const [port, setPort] = useState('');
@@ -83,7 +86,7 @@ export default function DatabaseSettingsDialog({ open, onClose }: DatabaseSettin
     };
 
     const handleMigrate = async () => {
-        if (!confirm("Are you sure you want to migrate all data to the new database? This process may take a while depending on your log volume.")) return;
+        if (!await confirm({ message: "Are you sure you want to migrate all data to the new database? This process may take a while depending on your log volume.", isDanger: true })) return;
         
         const url = buildConnectionString();
         const tid = toast.loading('Migrating database...');

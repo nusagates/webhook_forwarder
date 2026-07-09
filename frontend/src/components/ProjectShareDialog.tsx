@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useConfirm } from './ConfirmDialog';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { 
@@ -28,6 +29,8 @@ interface Member {
 }
 
 export default function ProjectShareDialog({ open, onClose, projectId, projectRole }: ProjectShareDialogProps) {
+    const confirm = useConfirm();
+
     const [members, setMembers] = useState<Member[]>([]);
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('viewer');
@@ -71,7 +74,7 @@ export default function ProjectShareDialog({ open, onClose, projectId, projectRo
     };
 
     const handleRemoveMember = async (memberId: number) => {
-        if (!confirm('Are you sure you want to remove this member?')) return;
+        if (!await confirm({ message: 'Are you sure you want to remove this member?', isDanger: true })) return;
         try {
             await fetchApi(`/api/projects/${projectId}/members/${memberId}`, { method: 'DELETE' });
             toast.success('Member removed');
@@ -96,7 +99,7 @@ export default function ProjectShareDialog({ open, onClose, projectId, projectRo
 
     const handleTransferOwnership = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!confirm('DANGER: Are you sure you want to transfer ownership? You will lose Owner privileges.')) return;
+        if (!await confirm({ message: 'DANGER: Are you sure you want to transfer ownership? You will lose Owner privileges.', isDanger: true })) return;
         
         setIsTransferring(true);
         try {

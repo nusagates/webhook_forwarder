@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useConfirm } from '../components/ConfirmDialog';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { Typography, Box, TextField, Button, Card, CardContent, CardActions, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
@@ -11,6 +12,8 @@ import ProjectShareDialog from '../components/ProjectShareDialog';
 interface Project { id: string; name: string; description?: string; my_role: string; }
 
 export default function Projects() {
+    const confirm = useConfirm();
+
     const [projects, setProjects] = useState<Project[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -83,7 +86,7 @@ export default function Projects() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this project? All endpoints and destinations will be lost!')) return;
+        if (!await confirm({ message: 'Are you sure you want to delete this project? All endpoints and destinations will be lost!', isDanger: true })) return;
         try {
             await fetchApi(`/api/projects/${id}`, { method: 'DELETE' });
             loadProjects();

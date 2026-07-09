@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useConfirm } from '../components/ConfirmDialog';
 import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 import { Typography, Box, Paper, TextField, Button, Select, MenuItem, InputLabel, FormControl, Card, CardContent, Divider, List, ListItem, ListItemIcon, ListItemText, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
@@ -17,6 +18,8 @@ interface Endpoint {
 interface Project { id: string; name: string; my_role?: string; }
 
 export default function Endpoints() {
+    const confirm = useConfirm();
+
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('');
     const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
@@ -151,7 +154,7 @@ export default function Endpoints() {
     };
 
     const handleDeleteEndpoint = async (id: number) => {
-        if (!confirm('Delete this endpoint?')) return;
+        if (!await confirm({ message: 'Delete this endpoint?', isDanger: true })) return;
         try {
             await fetchApi(`/api/endpoints/${id}`, { method: 'DELETE' });
             loadEndpoints(selectedProjectId);
@@ -160,7 +163,7 @@ export default function Endpoints() {
     };
 
     const handleDeleteDestination = async (epId: number, destId: number) => {
-        if (!confirm('Remove this destination?')) return;
+        if (!await confirm({ message: 'Remove this destination?', isDanger: true })) return;
         try {
             await fetchApi(`/api/endpoints/${epId}/destinations/${destId}`, { method: 'DELETE' });
             loadEndpoints(selectedProjectId);

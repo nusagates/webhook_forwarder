@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -8,6 +9,8 @@ import { fetchApi } from '../api';
 import toast from 'react-hot-toast';
 
 export default function UserManagement() {
+    const confirm = useConfirm();
+
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     
@@ -37,7 +40,7 @@ export default function UserManagement() {
     };
 
     const toggleAdmin = async (user: any) => {
-        if (!confirm(`Are you sure you want to ${user.is_admin ? 'revoke' : 'grant'} Admin rights for ${user.email}?`)) return;
+        if (!await confirm({ message: `Are you sure you want to ${user.is_admin ? 'revoke' : 'grant'} Admin rights for ${user.email}?`, isDanger: true })) return;
         try {
             await fetchApi(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
@@ -57,7 +60,7 @@ export default function UserManagement() {
     };
 
     const toggleBlock = async (user: any) => {
-        if (!confirm(`Are you sure you want to ${user.is_blocked ? 'unblock' : 'block'} ${user.email}?`)) return;
+        if (!await confirm({ message: `Are you sure you want to ${user.is_blocked ? 'unblock' : 'block'} ${user.email}?`, isDanger: true })) return;
         try {
             await fetchApi(`/api/admin/users/${user.id}`, {
                 method: 'PUT',
