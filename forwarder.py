@@ -121,6 +121,13 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
         # Enforce log limits
         try:
             max_logs = int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
+            # Check user custom limit
+            endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
+            if endpoint and endpoint.project and endpoint.project.owner:
+                owner = endpoint.project.owner
+                if owner.limit_logs is not None:
+                    max_logs = owner.limit_logs
+            
             log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).count()
             if log_count > max_logs:
                 # Find IDs of oldest logs to delete

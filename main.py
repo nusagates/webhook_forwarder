@@ -219,6 +219,16 @@ def read_projects(current_user: models.User = Depends(auth.get_current_user), db
 
 @app.post("/api/projects", response_model=schemas.Project)
 def create_project(project: schemas.ProjectCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    # Check limits
+    current_count = db.query(models.Project).filter(models.Project.user_id == current_user.id).count()
+    if current_user.limit_projects is not None:
+        max_projects = current_user.limit_projects
+    else:
+        max_projects = int(get_system_setting(db, "max_projects_per_user", "5"))
+        
+    if current_count >= max_projects:
+        raise HTTPException(status_code=400, detail=f"Project limit reached. Maximum allowed is {max_projects}.")
+
     new_project = models.Project(name=project.name, description=project.description, user_id=current_user.id)
     db.add(new_project)
     db.commit()
