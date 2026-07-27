@@ -480,6 +480,20 @@ def update_destination(endpoint_id: int, destination_id: int, destination_update
     db.refresh(destination)
     return destination
 
+@app.delete("/api/endpoints/{endpoint_id}/destinations/{destination_id}")
+def delete_destination(endpoint_id: int, destination_id: int, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
+    if not endpoint or (endpoint.project.owner_id != current_user.id and current_user.id not in [m.user_id for m in endpoint.project.members]):
+        raise HTTPException(status_code=403, detail="Not authorized to delete destinations in this project")
+        
+    destination = db.query(models.Destination).filter(models.Destination.id == destination_id, models.Destination.endpoint_id == endpoint_id).first()
+    if not destination:
+        raise HTTPException(status_code=404, detail="Destination not found")
+        
+    db.delete(destination)
+    db.commit()
+    return {"status": "success", "message": "Destination deleted successfully"}
+
 class TestDestinationRequest(BaseModel):
     url: str
     auth_type: str = "none"
