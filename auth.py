@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 
-SECRET_KEY = "my_super_secret_key" # In production, use an env var
+import os
+SECRET_KEY = os.getenv("SECRET_KEY", "my_super_secret_key") # In production, MUST use an env var
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
