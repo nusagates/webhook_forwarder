@@ -28,22 +28,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from starlette.concurrency import run_in_threadpool
+
+def fetch_endpoint_db(db, project_id, slug):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if project and project.is_suspended:
+        return "suspended", None, None, None, None
+        
+    endpoint = db.query(models.Endpoint).filter(models.Endpoint.slug == slug, models.Endpoint.project_id == project_id).first()
+    if not endpoint:
+        return "not_found", None, None, None, None
+        
+    destinations = db.query(models.Destination).filter(models.Destination.endpoint_id == endpoint.id).all()
+    # Eagerly access fields to ensure they are loaded
+    for d in destinations:
+        _ = d.url
+        _ = d.is_active
+        _ = d.auth_type
+        _ = d.auth_config
+        
+    return "ok", endpoint.auth_type, endpoint.auth_config or "{}", endpoint.id, destinations
+
 # --- Webhook Receiver Route (Public) ---
 @app.post("/webhook/{project_id}/{slug}")
 @app.post("/webhook/{project_id}/{slug}/")
 @app.get("/webhook/{project_id}/{slug}")
 @app.get("/webhook/{project_id}/{slug}/")
 async def receive_webhook(project_id: str, slug: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    project = db.query(models.Project).filter(models.Project.id == project_id).first()
-    if project and project.is_suspended:
+    status, auth_type, auth_config_str, endpoint_id, destinations = await run_in_threadpool(fetch_endpoint_db, db, project_id, slug)
+    
+    if status == "suspended":
         raise HTTPException(status_code=403, detail="Project is suspended")
-        
-    endpoint = db.query(models.Endpoint).filter(models.Endpoint.slug == slug, models.Endpoint.project_id == project_id).first()
-    if not endpoint:
+    if status == "not_found":
         raise HTTPException(status_code=404, detail="Webhook endpoint not found")
-        
-    auth_type = endpoint.auth_type
-    auth_config_str = endpoint.auth_config or "{}"
     try:
         auth_config = json.loads(auth_config_str)
     except:
@@ -126,8 +143,7 @@ async def receive_webhook(project_id: str, slug: str, request: Request, backgrou
         "query_params": json.dumps(dict(request.query_params))
     }
         
-    destinations = db.query(models.Destination).filter(models.Destination.endpoint_id == endpoint.id).all()
-    background_tasks.add_task(forwarder.forward_webhook, endpoint.id, payload, destinations, req_meta)
+    background_tasks.add_task(forwarder.forward_webhook, endpoint_id, payload, destinations, req_meta)
     
     return {"status": "success", "message": "Webhook received and queued for forwarding"}
 
@@ -312,7 +328,9 @@ def read_projects(current_user: models.User = Depends(auth.get_current_user), db
             mp.project.my_role = mp.role
             shared_projects.append(mp.project)
             
-    return owned_projects + shared_projects
+    result = owned_projects + shared_projects
+    print(f"DEBUG read_projects for user {current_user.id}: returning {len(result)} projects")
+    return result
 
 @app.post("/api/projects", response_model=schemas.Project)
 def create_project(project: schemas.ProjectCreate, current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(get_db)):

@@ -11,11 +11,46 @@ def get_system_setting(db: Session, key: str, default: str):
     return default
 
 
-async def forward_webhook(endpoint_id: int, payload: str, destinations: list[models.Destination], req_meta: dict):
-    # Note: normally we might run DB operations synchronously here, 
-    # but since it's a background task in FastAPI, we should use a fresh DB session
+def save_log_and_enforce_limit(log_dict, ep_id):
     from database import SessionLocal
     db = SessionLocal()
+    try:
+        log_entry = models.DeliveryLog(**log_dict)
+        db.add(log_entry)
+        db.commit()
+        db.refresh(log_entry)
+        
+        try:
+            max_logs = int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
+            # Check user custom limit
+            endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == ep_id).first()
+            if endpoint and endpoint.project and endpoint.project.owner:
+                owner = endpoint.project.owner
+                if owner.limit_logs is not None:
+                    max_logs = owner.limit_logs
+            
+            log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == ep_id).count()
+            if log_count > max_logs:
+                # Find IDs of oldest logs to delete
+                logs_to_delete = log_count - max_logs
+                oldest_logs = db.query(models.DeliveryLog.id).filter(
+                    models.DeliveryLog.endpoint_id == ep_id
+                ).order_by(models.DeliveryLog.created_at.asc()).limit(logs_to_delete).all()
+                
+                if oldest_logs:
+                    old_ids = [log[0] for log in oldest_logs]
+                    db.query(models.DeliveryLog).filter(models.DeliveryLog.id.in_(old_ids)).delete(synchronize_session=False)
+                    db.commit()
+        except Exception as e:
+            print(f"Error enforcing log limits: {e}")
+            db.rollback()
+            
+        return log_entry.id
+    finally:
+        db.close()
+
+async def forward_webhook(endpoint_id: int, payload: str, destinations: list[models.Destination], req_meta: dict):
+    from starlette.concurrency import run_in_threadpool
     
     try:
         active_destinations = [d for d in destinations if d.is_active]
@@ -112,42 +147,11 @@ async def forward_webhook(endpoint_id: int, payload: str, destinations: list[mod
             
             log_dict["response_body"] = "\n".join(responses)
             
-        # Log the single delivery
-        log_entry = models.DeliveryLog(**log_dict)
-        db.add(log_entry)
-        db.commit()
-        db.refresh(log_entry)
+        # Log the single delivery off the event loop
+        log_entry_id = await run_in_threadpool(save_log_and_enforce_limit, log_dict, endpoint_id)
         
-        # Enforce log limits
-        try:
-            max_logs = int(get_system_setting(db, "max_logs_per_endpoint", "1000"))
-            # Check user custom limit
-            endpoint = db.query(models.Endpoint).filter(models.Endpoint.id == endpoint_id).first()
-            if endpoint and endpoint.project and endpoint.project.owner:
-                owner = endpoint.project.owner
-                if owner.limit_logs is not None:
-                    max_logs = owner.limit_logs
-            
-            log_count = db.query(models.DeliveryLog).filter(models.DeliveryLog.endpoint_id == endpoint_id).count()
-            if log_count > max_logs:
-                # Find IDs of oldest logs to delete
-                logs_to_delete = log_count - max_logs
-                oldest_logs = db.query(models.DeliveryLog.id).filter(
-                    models.DeliveryLog.endpoint_id == endpoint_id
-                ).order_by(models.DeliveryLog.created_at.asc()).limit(logs_to_delete).all()
-                
-                if oldest_logs:
-                    old_ids = [log[0] for log in oldest_logs]
-                    db.query(models.DeliveryLog).filter(models.DeliveryLog.id.in_(old_ids)).delete(synchronize_session=False)
-                    db.commit()
-        except Exception as e:
-            print(f"Error enforcing log limits: {e}")
-            db.rollback()
-        
-        log_dict['id'] = log_entry.id
+        log_dict['id'] = log_entry_id
         await manager.broadcast_to_endpoint(endpoint_id, log_dict)
         
     except Exception as e:
         print(f"Error in forwarder: {e}")
-    finally:
-        db.close()

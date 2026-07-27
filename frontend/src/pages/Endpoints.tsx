@@ -8,7 +8,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SendIcon from '@mui/icons-material/Send';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
-
+import ToggleOnIcon from '@mui/icons-material/ToggleOn';
+import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 interface Destination { id: number; url: string; is_active: boolean; auth_type?: string; auth_config?: string; endpoint_id?: number; }
 interface Endpoint { 
     id: number; name: string; slug: string; project_id: string; 
@@ -162,6 +163,22 @@ export default function Endpoints() {
             await fetchApi(`/api/endpoints/${epId}/destinations/${destId}`, { method: 'DELETE' });
             loadEndpoints(selectedProjectId);
             toast.success('Destination removed');
+        } catch (err: any) { toast.error(err.message); }
+    };
+
+    const handleToggleDestinationActive = async (epId: number, dest: Destination) => {
+        try {
+            await fetchApi(`/api/endpoints/${epId}/destinations/${dest.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    url: dest.url,
+                    is_active: !dest.is_active,
+                    auth_type: dest.auth_type || 'none',
+                    auth_config: dest.auth_config || null
+                })
+            });
+            loadEndpoints(selectedProjectId);
+            toast.success(`Destination ${!dest.is_active ? 'activated' : 'deactivated'}`);
         } catch (err: any) { toast.error(err.message); }
     };
 
@@ -351,6 +368,9 @@ export default function Endpoints() {
                                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                                         <Button size="small" color="primary" onClick={() => handleTestExistingDestination(dest)}>
                                                             Test
+                                                        </Button>
+                                                        <Button size="small" color="primary" onClick={() => handleToggleDestinationActive(ep.id, dest)}>
+                                                            {dest.is_active ? <ToggleOnIcon fontSize="small" /> : <ToggleOffIcon fontSize="small" color="action" />}
                                                         </Button>
                                                         <Button size="small" color="primary" onClick={() => setEditDestination({ ...dest, endpoint_id: ep.id })}>
                                                             <EditIcon fontSize="small" />

@@ -133,8 +133,8 @@ export default function Layout() {
 
   const menuItems = [
     { text: 'Projects', icon: <DashboardIcon />, path: '/projects' },
-    { text: 'Endpoints', icon: <ListAltIcon />, path: '/endpoints' },
-    { text: 'Live Logs', icon: <TimelineIcon />, path: '/logs' },
+    { text: 'Endpoints', icon: <ListAltIcon />, path: '/endpoints', disabled: projects.length === 0 },
+    { text: 'Live Logs', icon: <TimelineIcon />, path: '/logs', disabled: projects.length === 0 },
   ];
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -195,8 +195,10 @@ export default function Layout() {
         <List>
           {menuItems.map((item) => (
             <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
-              <Tooltip title={!open ? item.text : ''} placement="right" arrow>
+              <Tooltip title={item.disabled ? 'Please create a project first' : (!open ? item.text : '')} placement="right" arrow>
+                <span>
                 <ListItemButton
+                  disabled={item.disabled}
                   sx={{
                     minHeight: 48,
                     justifyContent: open ? 'initial' : 'center',
@@ -220,6 +222,7 @@ export default function Layout() {
                   </ListItemIcon>
                   <ListItemText primary={item.text} sx={{ opacity: open ? 1 : 0 }} />
                 </ListItemButton>
+                </span>
               </Tooltip>
             </ListItem>
           ))}

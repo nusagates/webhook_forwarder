@@ -9,13 +9,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ShareIcon from '@mui/icons-material/Share';
 import ProjectShareDialog from '../components/ProjectShareDialog';
+import { useProject } from '../contexts/ProjectContext';
 
 interface Project { id: string; name: string; description?: string; my_role: string; }
 
 export default function Projects() {
     const confirm = useConfirm();
+    const { refreshProjects } = useProject();
     
-
     const [projects, setProjects] = useState<Project[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -39,6 +40,7 @@ export default function Projects() {
         try {
             const data = await fetchApi('/api/projects');
             setProjects(data);
+            await refreshProjects();
         } catch (err) { console.error(err); }
     };
 
