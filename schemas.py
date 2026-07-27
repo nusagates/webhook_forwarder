@@ -47,6 +47,7 @@ class DestinationCreate(DestinationBase):
 class Destination(DestinationBase):
     id: int
     endpoint_id: int
+    created_by: Optional[User] = None
     class Config:
         from_attributes = True
 

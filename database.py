@@ -48,6 +48,11 @@ try:
             conn.commit()
         except:
             pass
+        try:
+            conn.execute(text("ALTER TABLE destinations ADD COLUMN created_by_id INTEGER NULL REFERENCES users(id)"))
+            conn.commit()
+        except:
+            pass
 except:
     pass
 

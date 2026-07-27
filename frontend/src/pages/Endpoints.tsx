@@ -10,7 +10,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import ToggleOffIcon from '@mui/icons-material/ToggleOff';
-interface Destination { id: number; url: string; is_active: boolean; auth_type?: string; auth_config?: string; endpoint_id?: number; }
+interface Destination { id: number; url: string; is_active: boolean; auth_type?: string; auth_config?: string; endpoint_id?: number; created_by?: { email: string; full_name?: string }; }
 interface Endpoint { 
     id: number; name: string; slug: string; project_id: string; 
     auth_type: string; 
@@ -362,7 +362,12 @@ export default function Endpoints() {
 
                                                 <ListItemText 
                                                     primary={dest.url} 
-                                                    secondary={dest.is_active ? 'Active' : 'Inactive'} 
+                                                    secondary={
+                                                        <React.Fragment>
+                                                            {dest.is_active ? 'Active' : 'Inactive'}
+                                                            {dest.created_by && ` • Added by: ${dest.created_by.full_name || dest.created_by.email}`}
+                                                        </React.Fragment>
+                                                    } 
                                                 />
                                                 {!isViewer && (
                                                     <Box sx={{ display: 'flex', gap: 1 }}>

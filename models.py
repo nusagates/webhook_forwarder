@@ -71,9 +71,11 @@ class Destination(Base):
     is_active = Column(Boolean, default=True)
     auth_type = Column(String(255), default="none")
     auth_config = Column(String(255), nullable=True) # JSON string
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     endpoint = relationship("Endpoint", back_populates="destinations")
     logs = relationship("DeliveryLog", back_populates="destination", cascade="all, delete-orphan")
+    created_by = relationship("User")
 
 class DeliveryLog(Base):
     __tablename__ = "delivery_logs"

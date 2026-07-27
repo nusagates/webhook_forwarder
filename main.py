@@ -450,7 +450,8 @@ def create_destination(endpoint_id: int, destination: schemas.DestinationCreate,
         is_active=destination.is_active, 
         auth_type=destination.auth_type,
         auth_config=destination.auth_config,
-        endpoint_id=endpoint_id
+        endpoint_id=endpoint_id,
+        created_by_id=current_user.id
     )
     db.add(new_dest)
     db.commit()
