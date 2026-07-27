@@ -154,7 +154,7 @@ def send_reset_email(email: str, token: str, reset_link: str):
     import json
     import os
     
-    api_token = "mlsn.c1022fff173ad451b4c37be06fcd10744891f32371b4ef94a4deab3942f2c56d"
+    api_token = os.getenv("MAILERSEND_API_TOKEN", "")
     sender = os.getenv("MAILERSEND_SENDER_EMAIL", "noreply@hook.web.id")
         
     payload = {
