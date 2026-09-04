@@ -838,8 +838,8 @@ class DbConfig(BaseModel):
     url: str
 
 def check_super_admin(current_user: User):
-    if current_user.id != 1:
-        raise HTTPException(status_code=403, detail="Super Admin access required")
+    if current_user.id != 1 and not getattr(current_user, "is_admin", False):
+        raise HTTPException(status_code=403, detail="Admin access required")
 
 @app.get("/api/settings/db")
 def get_db_settings(current_user: User = Depends(auth.get_current_user)):

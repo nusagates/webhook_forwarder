@@ -132,6 +132,7 @@ class SystemSettingUpdate(BaseModel):
     max_projects_per_user: int
     max_endpoints_per_project: int
     max_logs_per_endpoint: int
+    max_destinations_per_endpoint: int = 5
 
 
 class UserOutAdmin(BaseModel):
@@ -144,6 +145,7 @@ class UserOutAdmin(BaseModel):
     limit_projects: Optional[int]
     limit_endpoints: Optional[int]
     limit_logs: Optional[int]
+    limit_destinations: Optional[int] = None
     
     class Config:
         from_attributes = True
