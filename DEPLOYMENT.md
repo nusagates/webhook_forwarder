@@ -101,6 +101,15 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # Proxy /webhook requests to FastAPI Backend (PENTING untuk menerima webhook masuk)
+    location /webhook/ {
+        proxy_pass http://127.0.0.1:8006;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     # Proxy /api requests to FastAPI Backend
     location /api/ {
         proxy_pass http://127.0.0.1:8006;
@@ -110,8 +119,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Proxy WebSocket connections for Live Logs
-    location /ws/ {
+    # Proxy WebSocket connections for Live Logs (/api/ws/...)
+    location /api/ws/ {
         proxy_pass http://127.0.0.1:8006;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
