@@ -12,6 +12,7 @@ import base64
 import uuid
 import datetime
 
+import os
 import models, schemas, forwarder, auth
 from database import engine, get_db
 
@@ -20,9 +21,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Webhook Forwarder")
 
+cors_origins = os.getenv(
+    "CORS_ORIGINS", 
+    "http://localhost:5173,http://127.0.0.1:5173,https://hook.web.id,http://hook.web.id,https://www.hook.web.id"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[origin.strip() for origin in cors_origins if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
